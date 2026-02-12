@@ -10,7 +10,7 @@ using RestaurantManagement.Shared.Responses;
 namespace RestaurantManagement.API.Controllers.V1;
 
 [ApiController]
-[Route("api/v1/[controller]")]
+[Route("api/v1/orders")]
 [Authorize]
 public class OrderController : ControllerBase
 {
@@ -55,6 +55,17 @@ public class OrderController : ControllerBase
     public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto dto, CancellationToken cancellationToken)
     {
         var result = await _orderService.CreateOrderAsync(dto, cancellationToken);
+        return StatusCode(result.StatusCode, result);
+    }
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Policy = Permissions.OrderUpdate)]
+    [ProducesResponseType(typeof(ApiResponse<OrderDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateOrder(Guid id, [FromBody] UpdateOrderDto dto, CancellationToken cancellationToken)
+    {
+        var result = await _orderService.UpdateOrderAsync(id, dto, cancellationToken);
         return StatusCode(result.StatusCode, result);
     }
 

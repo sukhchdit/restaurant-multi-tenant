@@ -1,5 +1,5 @@
 import axiosInstance from './axiosInstance';
-import type { ApiResponse } from '@/types/api.types';
+import type { ApiResponse, PaginatedResponse } from '@/types/api.types';
 import type { Staff, Attendance, CreateStaffRequest } from '@/types/staff.types';
 
 export const staffApi = {
@@ -7,7 +7,7 @@ export const staffApi = {
     shift?: string;
     status?: string;
     role?: string;
-  }): Promise<ApiResponse<Staff[]>> => {
+  }): Promise<PaginatedResponse<Staff>> => {
     const response = await axiosInstance.get('/staff', { params });
     return response.data;
   },

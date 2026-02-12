@@ -25,7 +25,7 @@ public class CurrentUserService : ICurrentUserService
     {
         get
         {
-            var tenantId = _httpContextAccessor.HttpContext?.User.FindFirst("tenant_id")?.Value;
+            var tenantId = _httpContextAccessor.HttpContext?.User.FindFirst("tenantId")?.Value;
             return tenantId != null ? Guid.Parse(tenantId) : null;
         }
     }
@@ -34,7 +34,7 @@ public class CurrentUserService : ICurrentUserService
     {
         get
         {
-            var restaurantId = _httpContextAccessor.HttpContext?.User.FindFirst("restaurant_id")?.Value;
+            var restaurantId = _httpContextAccessor.HttpContext?.User.FindFirst("restaurantId")?.Value;
             return restaurantId != null ? Guid.Parse(restaurantId) : null;
         }
     }

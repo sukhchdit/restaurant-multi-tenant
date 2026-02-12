@@ -3,7 +3,7 @@ import type { ApiResponse } from '@/types/api.types';
 import type { RestaurantTable, CreateTableRequest, TableReservation } from '@/types/table.types';
 
 export const tableApi = {
-  getTables: async (params?: { status?: string }): Promise<ApiResponse<RestaurantTable[]>> => {
+  getTables: async (params?: { availableOnly?: boolean }): Promise<ApiResponse<RestaurantTable[]>> => {
     const response = await axiosInstance.get('/tables', { params });
     return response.data;
   },

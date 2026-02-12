@@ -14,6 +14,7 @@ public class TableService : ITableService
     private readonly IRepository<RestaurantTable> _tableRepository;
     private readonly IRepository<TableReservation> _reservationRepository;
     private readonly IRepository<Branch> _branchRepository;
+    private readonly IRepository<Order> _orderRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IMapper _mapper;
@@ -22,6 +23,7 @@ public class TableService : ITableService
         IRepository<RestaurantTable> tableRepository,
         IRepository<TableReservation> reservationRepository,
         IRepository<Branch> branchRepository,
+        IRepository<Order> orderRepository,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         IMapper mapper)
@@ -29,19 +31,35 @@ public class TableService : ITableService
         _tableRepository = tableRepository;
         _reservationRepository = reservationRepository;
         _branchRepository = branchRepository;
+        _orderRepository = orderRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _mapper = mapper;
     }
 
-    public async Task<ApiResponse<List<TableDto>>> GetTablesAsync(CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<List<TableDto>>> GetTablesAsync(bool availableOnly = false, CancellationToken cancellationToken = default)
     {
         var restaurantId = _currentUser.RestaurantId;
         if (restaurantId == null)
             return ApiResponse<List<TableDto>>.Fail("Restaurant context not found.", 403);
 
-        var tables = await _tableRepository.QueryNoTracking()
-            .Where(t => t.RestaurantId == restaurantId.Value && !t.IsDeleted)
+        var query = _tableRepository.QueryNoTracking()
+            .Where(t => t.RestaurantId == restaurantId.Value && !t.IsDeleted);
+
+        if (availableOnly)
+        {
+            // Exclude tables that have any active (non-completed, non-cancelled) order
+            var tablesWithActiveOrders = _orderRepository.QueryNoTracking()
+                .Where(o => o.TableId != null && !o.IsDeleted
+                            && o.Status != OrderStatus.Completed
+                            && o.Status != OrderStatus.Cancelled)
+                .Select(o => o.TableId!.Value);
+
+            query = query.Where(t => t.Status == TableStatus.Available
+                                     && !tablesWithActiveOrders.Contains(t.Id));
+        }
+
+        var tables = await query
             .OrderBy(t => t.FloorNumber)
             .ThenBy(t => t.Section)
             .ThenBy(t => t.TableNumber)

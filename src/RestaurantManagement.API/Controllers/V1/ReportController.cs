@@ -8,7 +8,7 @@ using RestaurantManagement.Shared.Responses;
 namespace RestaurantManagement.API.Controllers.V1;
 
 [ApiController]
-[Route("api/v1/[controller]")]
+[Route("api/v1/reports")]
 [Authorize]
 public class ReportController : ControllerBase
 {

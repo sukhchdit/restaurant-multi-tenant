@@ -33,6 +33,8 @@ public class DatabaseSeeder
             await SeedRolesAsync(cancellationToken);
             await SeedRolePermissionsAsync(cancellationToken);
             await SeedDefaultTenantAsync(cancellationToken);
+            await SeedDefaultRestaurantAsync(cancellationToken);
+            await SeedDefaultBranchAsync(cancellationToken);
             await SeedDefaultAdminUserAsync(cancellationToken);
 
             _logger.LogInformation("Database seeding completed successfully");
@@ -125,6 +127,38 @@ public class DatabaseSeeder
         }
     }
 
+    private async Task SeedDefaultRestaurantAsync(CancellationToken cancellationToken)
+    {
+        var restaurant = DefaultTenantSeedData.GetDefaultRestaurant();
+
+        var exists = await _context.Restaurants
+            .IgnoreQueryFilters()
+            .AnyAsync(r => r.Id == restaurant.Id, cancellationToken);
+
+        if (!exists)
+        {
+            await _context.Restaurants.AddAsync(restaurant, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("Seeded default restaurant: {RestaurantName}", restaurant.Name);
+        }
+    }
+
+    private async Task SeedDefaultBranchAsync(CancellationToken cancellationToken)
+    {
+        var branch = DefaultTenantSeedData.GetDefaultBranch();
+
+        var exists = await _context.Branches
+            .IgnoreQueryFilters()
+            .AnyAsync(b => b.Id == branch.Id, cancellationToken);
+
+        if (!exists)
+        {
+            await _context.Branches.AddAsync(branch, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("Seeded default branch: {BranchName}", branch.Name);
+        }
+    }
+
     private async Task SeedDefaultAdminUserAsync(CancellationToken cancellationToken)
     {
         var adminUser = DefaultTenantSeedData.GetDefaultAdminUser();
@@ -143,6 +177,21 @@ public class DatabaseSeeder
             await _context.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Seeded default admin user: {Email}", adminUser.Email);
+        }
+        else
+        {
+            // Ensure admin user role has restaurant assigned
+            var expectedUserRole = DefaultTenantSeedData.GetDefaultAdminUserRole();
+            var existingUserRole = await _context.UserRoles
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(ur => ur.Id == expectedUserRole.Id, cancellationToken);
+
+            if (existingUserRole != null && existingUserRole.RestaurantId == null)
+            {
+                existingUserRole.RestaurantId = expectedUserRole.RestaurantId;
+                await _context.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Updated admin user role with default restaurant");
+            }
         }
     }
 }

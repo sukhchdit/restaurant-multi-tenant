@@ -31,7 +31,17 @@ import {
   Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { ApiResponse } from '@/types/api.types';
+import type { ApiResponse, PaginatedResult } from '@/types/api.types';
+
+interface InvoiceLineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  taxRate: number;
+  taxAmount: number;
+}
 
 interface Invoice {
   id: string;
@@ -39,29 +49,28 @@ interface Invoice {
   orderId: string;
   orderNumber?: string;
   customerName?: string;
+  customerPhone?: string;
   subTotal: number;
   discountAmount: number;
-  taxAmount: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  gstAmount: number;
   totalAmount: number;
-  paymentStatus: 'pending' | 'paid' | 'partial';
+  paymentMethod?: string;
+  paymentStatus: string;
+  pdfUrl?: string;
+  emailSentAt?: string;
   createdAt: string;
-  dueDate?: string;
-  notes?: string;
-  items: {
-    name: string;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-  }[];
+  lineItems: InvoiceLineItem[];
 }
 
 const billingApi = {
-  getInvoices: async (params?: { search?: string }): Promise<ApiResponse<Invoice[]>> => {
+  getInvoices: async (params?: { search?: string; pageNumber?: number; pageSize?: number }): Promise<ApiResponse<PaginatedResult<Invoice>>> => {
     const response = await axiosInstance.get('/billing/invoices', { params });
     return response.data;
   },
   generateInvoice: async (orderId: string): Promise<ApiResponse<Invoice>> => {
-    const response = await axiosInstance.post('/billing/invoices', { orderId });
+    const response = await axiosInstance.post(`/billing/invoices/${orderId}`);
     return response.data;
   },
   downloadInvoicePdf: async (id: string): Promise<Blob> => {
@@ -102,7 +111,7 @@ export const Billing = () => {
     onError: () => toast.error('Failed to generate invoice'),
   });
 
-  const invoices = invoicesResponse?.data ?? [];
+  const invoices = invoicesResponse?.data?.items ?? [];
   const totalInvoiced = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
   const paidInvoices = invoices.filter((inv) => inv.paymentStatus === 'paid');
   const totalPaid = paidInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
@@ -325,13 +334,13 @@ export const Billing = () => {
               <div>
                 <p className="mb-2 font-semibold">Items</p>
                 <div className="space-y-2">
-                  {selectedInvoice.items.map((item, index) => (
+                  {selectedInvoice.lineItems.map((item) => (
                     <div
-                      key={index}
+                      key={item.id}
                       className="flex justify-between rounded-lg bg-muted p-3"
                     >
                       <div>
-                        <p className="font-medium">{item.name}</p>
+                        <p className="font-medium">{item.description}</p>
                         <p className="text-sm text-muted-foreground">
                           {item.quantity} x ${item.unitPrice.toFixed(2)}
                         </p>
@@ -353,10 +362,24 @@ export const Billing = () => {
                     <span>-${selectedInvoice.discountAmount.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tax</span>
-                  <span>${selectedInvoice.taxAmount.toFixed(2)}</span>
-                </div>
+                {selectedInvoice.cgstAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">CGST</span>
+                    <span>${selectedInvoice.cgstAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                {selectedInvoice.sgstAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">SGST</span>
+                    <span>${selectedInvoice.sgstAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                {selectedInvoice.gstAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Tax (GST)</span>
+                    <span>${selectedInvoice.gstAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-semibold text-lg">
                   <span>Total</span>
                   <span className="text-primary">

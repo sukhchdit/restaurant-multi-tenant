@@ -1,5 +1,5 @@
 import axiosInstance from './axiosInstance';
-import type { ApiResponse } from '@/types/api.types';
+import type { ApiResponse, PaginatedResponse } from '@/types/api.types';
 import type { InventoryItem, StockMovement, Supplier, DishIngredient } from '@/types/inventory.types';
 
 export const inventoryApi = {
@@ -7,7 +7,7 @@ export const inventoryApi = {
     category?: string;
     lowStock?: boolean;
     search?: string;
-  }): Promise<ApiResponse<InventoryItem[]>> => {
+  }): Promise<PaginatedResponse<InventoryItem>> => {
     const response = await axiosInstance.get('/inventory', { params });
     return response.data;
   },

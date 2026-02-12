@@ -57,7 +57,7 @@ export const Dashboard = () => {
   });
 
   const stats = dashboardStats?.data;
-  const recentOrders = ordersResponse?.data ?? [];
+  const recentOrders = ordersResponse?.data?.items ?? [];
   const salesData = salesReport?.data?.periodData ?? [];
 
   return (

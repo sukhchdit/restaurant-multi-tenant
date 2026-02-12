@@ -17,7 +17,7 @@ public class TenantResolutionMiddleware
     {
         if (context.User.Identity?.IsAuthenticated == true)
         {
-            var tenantClaim = context.User.FindFirst("tenant_id")?.Value;
+            var tenantClaim = context.User.FindFirst("tenantId")?.Value;
             if (!string.IsNullOrEmpty(tenantClaim) && Guid.TryParse(tenantClaim, out var tenantId))
             {
                 context.Items["TenantId"] = tenantId;

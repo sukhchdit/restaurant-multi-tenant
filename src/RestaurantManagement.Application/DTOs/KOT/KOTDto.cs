@@ -10,7 +10,7 @@ public class KOTDto
     public string KOTNumber { get; set; } = string.Empty;
     public string? TableNumber { get; set; }
     public KOTStatus Status { get; set; }
-    public int Priority { get; set; }
+    public string Priority { get; set; } = "low";
     public Guid? AssignedChefId { get; set; }
     public string? AssignedChefName { get; set; }
     public string? Notes { get; set; }

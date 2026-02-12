@@ -11,6 +11,8 @@ public static class DefaultTenantSeedData
     private static readonly Guid DefaultAdminUserId = GenerateDeterministicGuid("default_admin_user");
     private static readonly Guid DefaultTenantSettingsId = GenerateDeterministicGuid("default_tenant_settings");
     private static readonly Guid DefaultUserRoleId = GenerateDeterministicGuid("default_admin_user_role");
+    private static readonly Guid DefaultRestaurantId = GenerateDeterministicGuid("default_restaurant");
+    private static readonly Guid DefaultBranchId = GenerateDeterministicGuid("default_branch");
 
     /// <summary>
     /// Returns the default tenant to be seeded on first run.
@@ -72,6 +74,45 @@ public static class DefaultTenantSeedData
     }
 
     /// <summary>
+    /// Returns the default restaurant.
+    /// </summary>
+    public static Restaurant GetDefaultRestaurant()
+    {
+        return new Restaurant
+        {
+            Id = DefaultRestaurantId,
+            TenantId = DefaultTenantId,
+            Name = "Spice Paradise",
+            Description = "Multi-cuisine restaurant",
+            Phone = "+91-9999999999",
+            Email = "info@spiceparadise.com",
+            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        };
+    }
+
+    /// <summary>
+    /// Returns the default branch for the default restaurant.
+    /// </summary>
+    public static Branch GetDefaultBranch()
+    {
+        return new Branch
+        {
+            Id = DefaultBranchId,
+            TenantId = DefaultTenantId,
+            RestaurantId = DefaultRestaurantId,
+            Name = "Main Branch",
+            AddressLine1 = "123 Main Street",
+            City = "Mumbai",
+            State = "Maharashtra",
+            PostalCode = "400001",
+            Country = "India",
+            Phone = "+91-9999999999",
+            IsActive = true,
+            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        };
+    }
+
+    /// <summary>
     /// Returns the user-role mapping for the default admin (SuperAdmin role).
     /// </summary>
     public static UserRole GetDefaultAdminUserRole()
@@ -82,6 +123,7 @@ public static class DefaultTenantSeedData
             TenantId = DefaultTenantId,
             UserId = DefaultAdminUserId,
             RoleId = RoleSeedData.GetRoleId(Roles.SuperAdmin),
+            RestaurantId = DefaultRestaurantId,
             CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         };
     }

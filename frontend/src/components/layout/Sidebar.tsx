@@ -39,79 +39,79 @@ const navItems: NavItem[] = [
     name: 'Menu',
     path: '/menu',
     icon: UtensilsCrossed,
-    roles: ['restaurant_admin', 'manager'],
+    roles: ['SuperAdmin', 'RestaurantAdmin', 'Manager'],
   },
   {
     name: 'Orders',
     path: '/orders',
     icon: ShoppingCart,
-    roles: ['restaurant_admin', 'manager', 'waiter', 'cashier'],
+    roles: ['SuperAdmin', 'RestaurantAdmin', 'Manager', 'Waiter', 'Cashier'],
   },
   {
     name: 'Tables',
     path: '/tables',
     icon: TableIcon,
-    roles: ['restaurant_admin', 'manager', 'waiter'],
+    roles: ['SuperAdmin', 'RestaurantAdmin', 'Manager', 'Waiter'],
   },
   {
     name: 'Kitchen',
     path: '/kitchen',
     icon: ChefHat,
-    roles: ['kitchen', 'manager'],
+    roles: ['SuperAdmin', 'Kitchen', 'Manager'],
   },
   {
     name: 'Inventory',
     path: '/inventory',
     icon: Package,
-    roles: ['restaurant_admin', 'manager'],
+    roles: ['SuperAdmin', 'RestaurantAdmin', 'Manager'],
   },
   {
     name: 'Staff',
     path: '/staff',
     icon: Users,
-    roles: ['restaurant_admin', 'manager'],
+    roles: ['SuperAdmin', 'RestaurantAdmin', 'Manager'],
   },
   {
     name: 'Payments',
     path: '/payments',
     icon: CreditCard,
-    roles: ['restaurant_admin', 'manager', 'cashier'],
+    roles: ['SuperAdmin', 'RestaurantAdmin', 'Manager', 'Cashier'],
   },
   {
     name: 'Discounts',
     path: '/discounts',
     icon: Percent,
-    roles: ['restaurant_admin', 'manager'],
+    roles: ['SuperAdmin', 'RestaurantAdmin', 'Manager'],
   },
   {
     name: 'Customers',
     path: '/customers',
     icon: UserCircle,
-    roles: ['restaurant_admin', 'manager'],
+    roles: ['SuperAdmin', 'RestaurantAdmin', 'Manager'],
   },
   {
     name: 'Billing',
     path: '/billing',
     icon: Receipt,
-    roles: ['restaurant_admin', 'manager', 'cashier'],
+    roles: ['SuperAdmin', 'RestaurantAdmin', 'Manager', 'Cashier'],
   },
   {
     name: 'Accounts',
     path: '/accounts',
     icon: BookOpen,
-    roles: ['restaurant_admin', 'manager'],
+    roles: ['SuperAdmin', 'RestaurantAdmin', 'Manager'],
   },
   {
     name: 'Reports',
     path: '/reports',
     icon: BarChart3,
-    roles: ['restaurant_admin', 'manager', 'cashier'],
+    roles: ['SuperAdmin', 'RestaurantAdmin', 'Manager', 'Cashier'],
   },
   {
     name: 'Audit Logs',
     path: '/audit-logs',
     icon: ClipboardList,
-    roles: ['restaurant_admin'],
+    roles: ['SuperAdmin', 'RestaurantAdmin'],
   },
   {
     name: 'Settings',
@@ -146,7 +146,7 @@ export const Sidebar = () => {
               {user?.restaurantName || 'Restaurant'}
             </h2>
             <p className="truncate text-xs text-sidebar-foreground/60">
-              {user?.role.replace('_', ' ').toUpperCase()}
+              {user?.role.replace(/([A-Z])/g, ' $1').trim()}
             </p>
           </div>
         </div>
