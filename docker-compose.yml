@@ -1,0 +1,102 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: src/RestaurantManagement.API/Dockerfile
+    container_name: restaurant-api
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=mysql;Port=3306;Database=restaurant_management;User=root;Password=${MYSQL_ROOT_PASSWORD:-Restaurant@123};
+      - ConnectionStrings__Redis=redis:6379
+      - JWT__Secret=${JWT_SECRET:-YourSuperSecretKeyThatIsAtLeast32CharactersLong2024!}
+      - JWT__Issuer=RestaurantManagement
+      - JWT__Audience=RestaurantManagementApp
+      - JWT__AccessTokenExpiryMinutes=60
+      - JWT__RefreshTokenExpiryDays=7
+      - Cors__AllowedOrigins__0=http://localhost:3000
+      - Cors__AllowedOrigins__1=http://localhost:5173
+      - FileUpload__UploadPath=/app/uploads
+    volumes:
+      - api-uploads:/app/uploads
+      - api-logs:/app/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - restaurant-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: restaurant-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - restaurant-network
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    container_name: restaurant-mysql
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Restaurant@123}
+      MYSQL_DATABASE: restaurant_management
+    volumes:
+      - mysql-data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-Restaurant@123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - restaurant-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: restaurant-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - restaurant-network
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
+  api-uploads:
+    driver: local
+  api-logs:
+    driver: local
+
+networks:
+  restaurant-network:
+    driver: bridge

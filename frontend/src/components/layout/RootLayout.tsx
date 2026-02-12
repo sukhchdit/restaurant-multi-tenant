@@ -1,0 +1,33 @@
+import { Outlet, useNavigate } from 'react-router';
+import { useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/store/store';
+import { Sidebar } from '@/components/layout/Sidebar';
+import { Header } from '@/components/layout/Header';
+
+export const RootLayout = () => {
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, navigate]);
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-background">
+      <Sidebar />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <Header />
+        <main className="flex-1 overflow-y-auto p-6">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+};

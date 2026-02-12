@@ -1,0 +1,44 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+*.DotSettings.user
+
+# Node
+node_modules/
+frontend/node_modules/
+mobile/node_modules/
+frontend/dist/
+.env
+.env.local
+.env.production
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+nul
+
+# Logs
+*.log
+logs/
+
+# Build
+publish/
+out/
+
+# Uploads (local dev)
+uploads/
+
+# Coverage
+coverage/
+TestResults/
