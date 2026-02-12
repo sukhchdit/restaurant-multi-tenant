@@ -1,12 +1,12 @@
 export type UserRole =
-  | 'super_admin'
-  | 'restaurant_admin'
-  | 'manager'
-  | 'cashier'
-  | 'kitchen'
-  | 'waiter'
-  | 'delivery'
-  | 'customer';
+  | 'SuperAdmin'
+  | 'RestaurantAdmin'
+  | 'Manager'
+  | 'Cashier'
+  | 'Kitchen'
+  | 'Waiter'
+  | 'Delivery'
+  | 'Customer';
 
 export interface User {
   id: string;

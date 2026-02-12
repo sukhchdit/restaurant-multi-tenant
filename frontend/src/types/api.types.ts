@@ -6,19 +6,17 @@ export interface ApiResponse<T> {
   statusCode: number;
 }
 
-export interface PaginatedResponse<T> {
-  success: boolean;
-  message: string;
-  data: T[];
-  errors: string[] | null;
-  statusCode: number;
+export interface PaginatedResult<T> {
+  items: T[];
   pageNumber: number;
   pageSize: number;
   totalPages: number;
   totalCount: number;
-  hasPrevious: boolean;
-  hasNext: boolean;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
 }
+
+export type PaginatedResponse<T> = ApiResponse<PaginatedResult<T>>;
 
 export interface PaginationParams {
   pageNumber?: number;

@@ -100,7 +100,7 @@ export const Header = () => {
           <div className="text-right">
             <p className="text-sm font-medium">{user?.fullName}</p>
             <p className="text-xs text-muted-foreground capitalize">
-              {user?.role.replace('_', ' ')}
+              {user?.role.replace(/([A-Z])/g, ' $1').trim()}
             </p>
           </div>
         </div>

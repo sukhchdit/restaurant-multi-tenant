@@ -43,7 +43,7 @@ export const CustomerApp = () => {
     },
   });
 
-  const menu = (menuResponse?.data ?? []).filter((item) => item.isAvailable);
+  const menu = (menuResponse?.data?.items ?? []).filter((item) => item.isAvailable);
   const categories = Array.from(new Set(menu.map((item) => item.categoryName).filter(Boolean))) as string[];
 
   const filterMenu = (category?: string) => {

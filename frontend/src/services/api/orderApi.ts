@@ -1,6 +1,6 @@
 import axiosInstance from './axiosInstance';
 import type { ApiResponse, PaginatedResponse } from '@/types/api.types';
-import type { Order, CreateOrderRequest, KitchenOrderTicket } from '@/types/order.types';
+import type { Order, CreateOrderRequest, UpdateOrderRequest, KitchenOrderTicket } from '@/types/order.types';
 import type { DashboardStats } from '@/types/report.types';
 
 export const orderApi = {
@@ -27,6 +27,11 @@ export const orderApi = {
     return response.data;
   },
 
+  updateOrder: async (id: string, data: UpdateOrderRequest): Promise<ApiResponse<Order>> => {
+    const response = await axiosInstance.put(`/orders/${id}`, data);
+    return response.data;
+  },
+
   updateOrderStatus: async (id: string, status: string): Promise<ApiResponse<Order>> => {
     const response = await axiosInstance.patch(`/orders/${id}/status`, { status });
     return response.data;
@@ -43,7 +48,7 @@ export const orderApi = {
   },
 
   getDashboardStats: async (): Promise<ApiResponse<DashboardStats>> => {
-    const response = await axiosInstance.get('/orders/dashboard');
+    const response = await axiosInstance.get('/orders/dashboard-stats');
     return response.data;
   },
 

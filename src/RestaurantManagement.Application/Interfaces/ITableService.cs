@@ -5,7 +5,7 @@ namespace RestaurantManagement.Application.Interfaces;
 
 public interface ITableService
 {
-    Task<ApiResponse<List<TableDto>>> GetTablesAsync(CancellationToken cancellationToken = default);
+    Task<ApiResponse<List<TableDto>>> GetTablesAsync(bool availableOnly = false, CancellationToken cancellationToken = default);
     Task<ApiResponse<TableDto>> CreateTableAsync(CreateTableDto dto, CancellationToken cancellationToken = default);
     Task<ApiResponse<TableDto>> UpdateTableAsync(Guid id, CreateTableDto dto, CancellationToken cancellationToken = default);
     Task<ApiResponse<TableDto>> UpdateStatusAsync(Guid id, UpdateTableStatusDto dto, CancellationToken cancellationToken = default);

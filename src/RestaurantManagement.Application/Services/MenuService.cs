@@ -154,7 +154,7 @@ public class MenuService : IMenuService
             Price = dto.Price,
             IsVeg = dto.IsVeg,
             PreparationTime = dto.PreparationTime,
-            Tags = dto.Tags,
+            Tags = dto.Tags != null && dto.Tags.Count > 0 ? string.Join(",", dto.Tags) : null,
             IsAvailable = true,
             CreatedBy = _currentUser.UserId
         };
@@ -197,7 +197,7 @@ public class MenuService : IMenuService
         if (dto.ImageUrl != null) item.ImageUrl = dto.ImageUrl;
         if (dto.CalorieCount.HasValue) item.CalorieCount = dto.CalorieCount.Value;
         if (dto.SpiceLevel.HasValue) item.SpiceLevel = dto.SpiceLevel.Value;
-        if (dto.Tags != null) item.Tags = dto.Tags;
+        if (dto.Tags != null) item.Tags = dto.Tags.Count > 0 ? string.Join(",", dto.Tags) : null;
         if (dto.SortOrder.HasValue) item.SortOrder = dto.SortOrder.Value;
         if (dto.AvailableFrom.HasValue) item.AvailableFrom = dto.AvailableFrom.Value;
         if (dto.AvailableTo.HasValue) item.AvailableTo = dto.AvailableTo.Value;

@@ -50,6 +50,16 @@ export interface CreateOrderRequest {
   discountId?: string;
 }
 
+export interface UpdateOrderRequest {
+  tableId?: string;
+  customerName?: string;
+  customerPhone?: string;
+  orderType?: OrderType;
+  specialNotes?: string;
+  deliveryAddress?: string;
+  items?: CreateOrderItemRequest[];
+}
+
 export interface CreateOrderItemRequest {
   menuItemId: string;
   quantity: number;

@@ -7,7 +7,8 @@ RUN npm ci
 
 # Copy source and build with API URL set for nginx proxy
 COPY . .
-ENV VITE_API_BASE_URL=/api/v1
+ENV VITE_API_BASE_URL=http://localhost:5000/api/v1
+ENV VITE_SIGNALR_URL=http://localhost:5000/hubs
 RUN npm run build
 
 FROM nginx:alpine AS production

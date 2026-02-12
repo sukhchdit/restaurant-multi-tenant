@@ -75,7 +75,7 @@ public class StaffController : ControllerBase
         return StatusCode(result.StatusCode, result);
     }
 
-    [HttpPost("{staffId:guid}/check-in")]
+    [HttpPost("{staffId:guid}/attendance/check-in")]
     [Authorize(Policy = Permissions.StaffUpdate)]
     [ProducesResponseType(typeof(ApiResponse<AttendanceDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
@@ -85,7 +85,7 @@ public class StaffController : ControllerBase
         return StatusCode(result.StatusCode, result);
     }
 
-    [HttpPost("{staffId:guid}/check-out")]
+    [HttpPost("{staffId:guid}/attendance/check-out")]
     [Authorize(Policy = Permissions.StaffUpdate)]
     [ProducesResponseType(typeof(ApiResponse<AttendanceDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]

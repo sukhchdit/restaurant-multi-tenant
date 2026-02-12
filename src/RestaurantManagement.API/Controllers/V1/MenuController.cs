@@ -94,7 +94,7 @@ public class MenuController : ControllerBase
         return StatusCode(result.StatusCode, result);
     }
 
-    [HttpPatch("items/{id:guid}/toggle-availability")]
+    [HttpPatch("items/{id:guid}/availability")]
     [Authorize(Policy = Permissions.MenuUpdate)]
     [ProducesResponseType(typeof(ApiResponse<MenuItemDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]

@@ -43,7 +43,7 @@ export const router = createBrowserRouter([
       {
         path: 'menu',
         element: (
-          <ProtectedRoute allowedRoles={['restaurant_admin', 'manager']}>
+          <ProtectedRoute allowedRoles={['SuperAdmin', 'RestaurantAdmin', 'Manager']}>
             <MenuManagement />
           </ProtectedRoute>
         ),
@@ -51,7 +51,7 @@ export const router = createBrowserRouter([
       {
         path: 'orders',
         element: (
-          <ProtectedRoute allowedRoles={['restaurant_admin', 'manager', 'waiter', 'cashier']}>
+          <ProtectedRoute allowedRoles={['SuperAdmin', 'RestaurantAdmin', 'Manager', 'Waiter', 'Cashier']}>
             <OrderManagement />
           </ProtectedRoute>
         ),
@@ -59,7 +59,7 @@ export const router = createBrowserRouter([
       {
         path: 'tables',
         element: (
-          <ProtectedRoute allowedRoles={['restaurant_admin', 'manager', 'waiter']}>
+          <ProtectedRoute allowedRoles={['SuperAdmin', 'RestaurantAdmin', 'Manager', 'Waiter']}>
             <TableManagement />
           </ProtectedRoute>
         ),
@@ -67,7 +67,7 @@ export const router = createBrowserRouter([
       {
         path: 'kitchen',
         element: (
-          <ProtectedRoute allowedRoles={['kitchen', 'manager']}>
+          <ProtectedRoute allowedRoles={['SuperAdmin', 'Kitchen', 'Manager']}>
             <KitchenDisplay />
           </ProtectedRoute>
         ),
@@ -75,7 +75,7 @@ export const router = createBrowserRouter([
       {
         path: 'inventory',
         element: (
-          <ProtectedRoute allowedRoles={['restaurant_admin', 'manager']}>
+          <ProtectedRoute allowedRoles={['SuperAdmin', 'RestaurantAdmin', 'Manager']}>
             <Inventory />
           </ProtectedRoute>
         ),
@@ -83,7 +83,7 @@ export const router = createBrowserRouter([
       {
         path: 'staff',
         element: (
-          <ProtectedRoute allowedRoles={['restaurant_admin', 'manager']}>
+          <ProtectedRoute allowedRoles={['SuperAdmin', 'RestaurantAdmin', 'Manager']}>
             <StaffManagement />
           </ProtectedRoute>
         ),
@@ -91,7 +91,7 @@ export const router = createBrowserRouter([
       {
         path: 'payments',
         element: (
-          <ProtectedRoute allowedRoles={['restaurant_admin', 'manager', 'cashier']}>
+          <ProtectedRoute allowedRoles={['SuperAdmin', 'RestaurantAdmin', 'Manager', 'Cashier']}>
             <Payments />
           </ProtectedRoute>
         ),
@@ -99,7 +99,7 @@ export const router = createBrowserRouter([
       {
         path: 'discounts',
         element: (
-          <ProtectedRoute allowedRoles={['restaurant_admin', 'manager']}>
+          <ProtectedRoute allowedRoles={['SuperAdmin', 'RestaurantAdmin', 'Manager']}>
             <Discounts />
           </ProtectedRoute>
         ),
@@ -107,7 +107,7 @@ export const router = createBrowserRouter([
       {
         path: 'customers',
         element: (
-          <ProtectedRoute allowedRoles={['restaurant_admin', 'manager']}>
+          <ProtectedRoute allowedRoles={['SuperAdmin', 'RestaurantAdmin', 'Manager']}>
             <Customers />
           </ProtectedRoute>
         ),
@@ -115,7 +115,7 @@ export const router = createBrowserRouter([
       {
         path: 'billing',
         element: (
-          <ProtectedRoute allowedRoles={['restaurant_admin', 'manager', 'cashier']}>
+          <ProtectedRoute allowedRoles={['SuperAdmin', 'RestaurantAdmin', 'Manager', 'Cashier']}>
             <Billing />
           </ProtectedRoute>
         ),
@@ -123,7 +123,7 @@ export const router = createBrowserRouter([
       {
         path: 'accounts',
         element: (
-          <ProtectedRoute allowedRoles={['restaurant_admin', 'manager']}>
+          <ProtectedRoute allowedRoles={['SuperAdmin', 'RestaurantAdmin', 'Manager']}>
             <Accounts />
           </ProtectedRoute>
         ),
@@ -131,7 +131,7 @@ export const router = createBrowserRouter([
       {
         path: 'reports',
         element: (
-          <ProtectedRoute allowedRoles={['restaurant_admin', 'manager', 'cashier']}>
+          <ProtectedRoute allowedRoles={['SuperAdmin', 'RestaurantAdmin', 'Manager', 'Cashier']}>
             <Reports />
           </ProtectedRoute>
         ),
@@ -139,7 +139,7 @@ export const router = createBrowserRouter([
       {
         path: 'audit-logs',
         element: (
-          <ProtectedRoute allowedRoles={['restaurant_admin']}>
+          <ProtectedRoute allowedRoles={['SuperAdmin', 'RestaurantAdmin']}>
             <AuditLogs />
           </ProtectedRoute>
         ),

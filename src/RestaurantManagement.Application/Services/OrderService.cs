@@ -136,12 +136,12 @@ public class OrderService : IOrderService
         await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
-            var menuItemIds = dto.Items.Select(i => i.MenuItemId).ToList();
+            var menuItemIds = dto.Items.Select(i => i.MenuItemId).Distinct().ToArray();
             var menuItems = await _menuItemRepository.Query()
                 .Where(m => menuItemIds.Contains(m.Id) && !m.IsDeleted && m.IsAvailable)
                 .ToListAsync(cancellationToken);
 
-            if (menuItems.Count != menuItemIds.Distinct().Count())
+            if (menuItems.Count != menuItemIds.Length)
                 return ApiResponse<OrderDto>.Fail("One or more menu items are not available.");
 
             var orderNumber = $"ORD-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..6].ToUpper()}";
@@ -239,7 +239,7 @@ public class OrderService : IOrderService
                 if (table != null)
                 {
                     tableNumber = table.TableNumber;
-                    table.Status = TableStatus.Occupied;
+                    table.Status = TableStatus.Reserved;
                     table.CurrentOrderId = order.Id;
                     _tableRepository.Update(table);
                 }
@@ -293,6 +293,208 @@ public class OrderService : IOrderService
         }
     }
 
+    public async Task<ApiResponse<OrderDto>> UpdateOrderAsync(Guid id, UpdateOrderDto dto, CancellationToken cancellationToken = default)
+    {
+        var restaurantId = _currentUser.RestaurantId;
+        if (restaurantId == null)
+            return ApiResponse<OrderDto>.Fail("Restaurant context not found.", 403);
+
+        var order = await _orderRepository.Query()
+            .Include(o => o.OrderItems)
+            .Include(o => o.Table)
+            .Include(o => o.Waiter)
+            .FirstOrDefaultAsync(o => o.Id == id && !o.IsDeleted, cancellationToken);
+
+        if (order == null)
+            return ApiResponse<OrderDto>.Fail("Order not found.", 404);
+
+        // Allow editing any running order (not Completed or Cancelled)
+        if (order.Status == OrderStatus.Completed || order.Status == OrderStatus.Cancelled)
+            return ApiResponse<OrderDto>.Fail($"Cannot edit an order with status {order.Status}.");
+
+        if (dto.CustomerName != null)
+            order.CustomerName = dto.CustomerName;
+
+        if (dto.CustomerPhone != null)
+            order.CustomerPhone = dto.CustomerPhone;
+
+        if (dto.SpecialNotes != null)
+            order.SpecialNotes = dto.SpecialNotes;
+
+        if (dto.DeliveryAddress != null)
+            order.DeliveryAddress = dto.DeliveryAddress;
+
+        if (dto.OrderType.HasValue)
+            order.OrderType = dto.OrderType.Value;
+
+        // Handle table change
+        if (dto.TableId.HasValue && dto.TableId != order.TableId)
+        {
+            // Free old table
+            if (order.TableId.HasValue)
+            {
+                var oldTable = await _tableRepository.GetByIdAsync(order.TableId.Value, cancellationToken);
+                if (oldTable != null && oldTable.CurrentOrderId == order.Id)
+                {
+                    oldTable.Status = TableStatus.Available;
+                    oldTable.CurrentOrderId = null;
+                    _tableRepository.Update(oldTable);
+                }
+            }
+
+            // Assign new table
+            var newTable = await _tableRepository.GetByIdAsync(dto.TableId.Value, cancellationToken);
+            if (newTable == null)
+                return ApiResponse<OrderDto>.Fail("Table not found.", 404);
+
+            if (newTable.Status != TableStatus.Available && newTable.CurrentOrderId != order.Id)
+                return ApiResponse<OrderDto>.Fail("Selected table is not available.");
+
+            newTable.Status = TableStatus.Reserved;
+            newTable.CurrentOrderId = order.Id;
+            _tableRepository.Update(newTable);
+            order.TableId = dto.TableId.Value;
+        }
+
+        // Handle item changes
+        if (dto.Items != null)
+        {
+            if (dto.Items.Count == 0)
+                return ApiResponse<OrderDto>.Fail("Order must have at least one item.");
+
+            var menuItemIds = dto.Items.Select(i => i.MenuItemId).Distinct().ToArray();
+            var menuItems = await _menuItemRepository.Query()
+                .Where(m => menuItemIds.Contains(m.Id) && !m.IsDeleted && m.IsAvailable)
+                .ToListAsync(cancellationToken);
+
+            if (menuItems.Count != menuItemIds.Length)
+                return ApiResponse<OrderDto>.Fail("One or more menu items are not available.");
+
+            var existingItems = order.OrderItems.Where(oi => !oi.IsDeleted).ToList();
+
+            // Build lookup of desired items by MenuItemId
+            var desiredByMenu = dto.Items.ToDictionary(i => i.MenuItemId);
+
+            // Remove items no longer in the list
+            foreach (var existing in existingItems)
+            {
+                if (!desiredByMenu.ContainsKey(existing.MenuItemId))
+                {
+                    existing.IsDeleted = true;
+                    existing.DeletedAt = DateTime.UtcNow;
+                    _orderItemRepository.Update(existing);
+                }
+            }
+
+            // Update existing or add new items
+            var newOrderItems = new List<OrderItem>();
+            foreach (var itemDto in dto.Items)
+            {
+                var menuItem = menuItems.First(m => m.Id == itemDto.MenuItemId);
+                var unitPrice = menuItem.DiscountedPrice ?? menuItem.Price;
+                var totalPrice = unitPrice * itemDto.Quantity;
+
+                var existingItem = existingItems.FirstOrDefault(oi => oi.MenuItemId == itemDto.MenuItemId);
+                if (existingItem != null)
+                {
+                    // Update quantity and recalculate
+                    existingItem.Quantity = itemDto.Quantity;
+                    existingItem.UnitPrice = unitPrice;
+                    existingItem.TotalPrice = totalPrice;
+                    existingItem.Notes = itemDto.Notes;
+                    existingItem.UpdatedAt = DateTime.UtcNow;
+                    _orderItemRepository.Update(existingItem);
+                }
+                else
+                {
+                    // Add new item
+                    var newItem = new OrderItem
+                    {
+                        OrderId = order.Id,
+                        TenantId = order.TenantId,
+                        MenuItemId = menuItem.Id,
+                        MenuItemName = menuItem.Name,
+                        Quantity = itemDto.Quantity,
+                        UnitPrice = unitPrice,
+                        TotalPrice = totalPrice,
+                        Notes = itemDto.Notes,
+                        IsVeg = menuItem.IsVeg,
+                        Status = order.Status,
+                        CreatedBy = _currentUser.UserId
+                    };
+                    newOrderItems.Add(newItem);
+                }
+            }
+
+            if (newOrderItems.Count > 0)
+                await _orderItemRepository.AddRangeAsync(newOrderItems, cancellationToken);
+
+            // Recalculate totals
+            // Gather all active items: updated existing + newly added
+            decimal newSubTotal = 0;
+            foreach (var itemDto in dto.Items)
+            {
+                var menuItem = menuItems.First(m => m.Id == itemDto.MenuItemId);
+                var unitPrice = menuItem.DiscountedPrice ?? menuItem.Price;
+                newSubTotal += unitPrice * itemDto.Quantity;
+            }
+
+            order.SubTotal = newSubTotal;
+
+            // Re-apply discount
+            if (order.DiscountId.HasValue)
+            {
+                var discount = await _discountRepository.GetByIdAsync(order.DiscountId.Value, cancellationToken);
+                if (discount != null && discount.IsActive)
+                {
+                    if (discount.DiscountType == DiscountType.Percentage)
+                    {
+                        order.DiscountAmount = Math.Round(newSubTotal * discount.Value / 100, 2);
+                        if (discount.MaxDiscountAmount.HasValue && order.DiscountAmount > discount.MaxDiscountAmount.Value)
+                            order.DiscountAmount = discount.MaxDiscountAmount.Value;
+                    }
+                    else
+                    {
+                        order.DiscountAmount = discount.Value;
+                    }
+                }
+            }
+            else
+            {
+                order.DiscountAmount = 0;
+            }
+
+            // Recalculate tax
+            var taxConfigs = await _taxConfigRepository.FindAsync(
+                t => t.RestaurantId == restaurantId.Value && t.IsActive && !t.IsDeleted, cancellationToken);
+
+            decimal taxableAmount = newSubTotal - order.DiscountAmount;
+            decimal totalTax = 0;
+            foreach (var tax in taxConfigs)
+            {
+                totalTax += Math.Round(taxableAmount * tax.Rate / 100, 2);
+            }
+            order.TaxAmount = totalTax;
+            order.TotalAmount = taxableAmount + totalTax + order.DeliveryCharge;
+        }
+
+        order.UpdatedAt = DateTime.UtcNow;
+        order.UpdatedBy = _currentUser.UserId;
+
+        _orderRepository.Update(order);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Reload for correct mapping
+        var updated = await _orderRepository.Query()
+            .Include(o => o.OrderItems)
+            .Include(o => o.Table)
+            .Include(o => o.Waiter)
+            .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
+
+        var result = _mapper.Map<OrderDto>(updated);
+        return ApiResponse<OrderDto>.Ok(result, "Order updated successfully.");
+    }
+
     public async Task<ApiResponse<OrderDto>> UpdateOrderStatusAsync(Guid id, UpdateOrderStatusDto dto, CancellationToken cancellationToken = default)
     {
         var order = await _orderRepository.Query()
@@ -321,10 +523,21 @@ public class OrderService : IOrderService
         order.UpdatedAt = DateTime.UtcNow;
         order.UpdatedBy = _currentUser.UserId;
 
-        // Auto stock deduction on Confirmed
+        // Auto stock deduction on Confirmed + mark table as Occupied
         if (dto.Status == OrderStatus.Confirmed)
         {
             await DeductStockForOrderAsync(order, cancellationToken);
+
+            if (order.TableId.HasValue)
+            {
+                var table = await _tableRepository.GetByIdAsync(order.TableId.Value, cancellationToken);
+                if (table != null)
+                {
+                    table.Status = TableStatus.Occupied;
+                    table.UpdatedAt = DateTime.UtcNow;
+                    _tableRepository.Update(table);
+                }
+            }
         }
 
         // Free table on Completed

@@ -5,6 +5,7 @@ using RestaurantManagement.Application.DTOs.Auth;
 using RestaurantManagement.Application.Interfaces;
 using RestaurantManagement.Domain.Entities;
 using RestaurantManagement.Domain.Interfaces;
+using RestaurantManagement.Shared.Constants;
 using RestaurantManagement.Shared.Helpers;
 using RestaurantManagement.Shared.Responses;
 
@@ -245,15 +246,17 @@ public class AuthService : IAuthService
         User user, string role, Guid? restaurantId, string? restaurantName,
         CancellationToken cancellationToken)
     {
-        var secretKey = _configuration["Jwt:SecretKey"] ?? "DefaultSecretKeyForDevelopment12345678";
-        var issuer = _configuration["Jwt:Issuer"] ?? "RestaurantManagement";
-        var audience = _configuration["Jwt:Audience"] ?? "RestaurantManagement";
-        var expiryMinutes = int.TryParse(_configuration["Jwt:ExpiryMinutes"], out var exp) ? exp : 60;
-        var refreshTokenDays = int.TryParse(_configuration["Jwt:RefreshTokenDays"], out var rtd) ? rtd : 7;
+        var secretKey = _configuration["JWT:Secret"] ?? throw new InvalidOperationException("JWT:Secret is not configured");
+        var issuer = _configuration["JWT:Issuer"] ?? "RestaurantManagement";
+        var audience = _configuration["JWT:Audience"] ?? "RestaurantManagementApp";
+        var expiryMinutes = int.TryParse(_configuration["JWT:AccessTokenExpiryMinutes"], out var exp) ? exp : 60;
+        var refreshTokenDays = int.TryParse(_configuration["JWT:RefreshTokenExpiryDays"], out var rtd) ? rtd : 7;
+
+        var permissions = Permissions.GetPermissionsForRole(role);
 
         var accessToken = JwtHelper.GenerateAccessToken(
             user.Id, user.Email, role, user.TenantId, restaurantId,
-            secretKey, issuer, audience, expiryMinutes);
+            secretKey, issuer, audience, expiryMinutes, permissions);
 
         var refreshTokenValue = JwtHelper.GenerateRefreshToken();
 

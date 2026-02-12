@@ -28,7 +28,7 @@ export const Inventory = () => {
     },
   });
 
-  const inventory = inventoryResponse?.data ?? [];
+  const inventory = inventoryResponse?.data?.items ?? [];
   const lowStockItems = inventory.filter((i) => i.currentStock <= i.minStock);
   const totalValue = inventory.reduce((sum, i) => sum + i.currentStock * i.costPerUnit, 0);
 

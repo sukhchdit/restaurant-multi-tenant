@@ -8,7 +8,7 @@ using RestaurantManagement.Shared.Responses;
 namespace RestaurantManagement.API.Controllers.V1;
 
 [ApiController]
-[Route("api/v1/[controller]")]
+[Route("api/v1/tables")]
 [Authorize]
 public class TableController : ControllerBase
 {
@@ -22,9 +22,9 @@ public class TableController : ControllerBase
     [HttpGet]
     [Authorize(Policy = Permissions.TableView)]
     [ProducesResponseType(typeof(ApiResponse<List<TableDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetTables(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetTables([FromQuery] bool availableOnly = false, CancellationToken cancellationToken = default)
     {
-        var result = await _tableService.GetTablesAsync(cancellationToken);
+        var result = await _tableService.GetTablesAsync(availableOnly, cancellationToken);
         return StatusCode(result.StatusCode, result);
     }
 

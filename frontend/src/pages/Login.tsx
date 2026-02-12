@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '@/store/store';
 import { login } from '@/store/slices/authSlice';
@@ -11,11 +10,7 @@ import { ChefHat, Mail, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
 const demoAccounts = [
-  { email: 'admin@restaurant.com', role: 'Restaurant Admin' },
-  { email: 'manager@restaurant.com', role: 'Manager' },
-  { email: 'kitchen@restaurant.com', role: 'Kitchen Staff' },
-  { email: 'waiter@restaurant.com', role: 'Waiter' },
-  { email: 'cashier@restaurant.com', role: 'Cashier' },
+  { email: 'admin@restaurant.com', role: 'Super Admin' },
 ];
 
 export const Login = () => {
@@ -23,7 +18,6 @@ export const Login = () => {
   const [password, setPassword] = useState('');
   const dispatch = useDispatch<AppDispatch>();
   const { isLoading } = useSelector((state: RootState) => state.auth);
-  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +25,8 @@ export const Login = () => {
     try {
       await dispatch(login({ email, password })).unwrap();
       toast.success('Login successful!');
-      navigate('/');
+      // Use full page navigation to ensure Redux reinitializes from localStorage
+      window.location.href = '/';
     } catch (error) {
       toast.error(typeof error === 'string' ? error : 'Login failed. Please try again.');
     }
@@ -39,7 +34,7 @@ export const Login = () => {
 
   const handleDemoLogin = (demoEmail: string) => {
     setEmail(demoEmail);
-    setPassword('demo123');
+    setPassword('Admin@123');
   };
 
   return (
@@ -164,7 +159,7 @@ export const Login = () => {
                 </div>
 
                 <p className="mt-4 text-center text-xs text-muted-foreground">
-                  Demo password: <span className="font-mono">demo123</span>
+                  Demo password: <span className="font-mono">Admin@123</span>
                 </p>
               </CardContent>
             </Card>

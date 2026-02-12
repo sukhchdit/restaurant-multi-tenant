@@ -9,5 +9,5 @@ public class CreateMenuItemDto
     public decimal Price { get; set; }
     public bool IsVeg { get; set; }
     public int? PreparationTime { get; set; }
-    public string? Tags { get; set; }
+    public List<string>? Tags { get; set; }
 }

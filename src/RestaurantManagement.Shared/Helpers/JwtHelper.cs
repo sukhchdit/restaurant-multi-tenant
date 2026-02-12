@@ -17,7 +17,8 @@ public static class JwtHelper
         string secretKey,
         string issuer,
         string audience,
-        int expiryMinutes)
+        int expiryMinutes,
+        IEnumerable<string>? permissions = null)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -34,6 +35,14 @@ public static class JwtHelper
         if (restaurantId.HasValue)
         {
             claims.Add(new Claim("restaurantId", restaurantId.Value.ToString()));
+        }
+
+        if (permissions != null)
+        {
+            foreach (var permission in permissions)
+            {
+                claims.Add(new Claim("permission", permission));
+            }
         }
 
         var token = new JwtSecurityToken(

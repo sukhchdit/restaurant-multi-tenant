@@ -13,7 +13,7 @@ public class UpdateMenuItemDto
     public string? ImageUrl { get; set; }
     public int? CalorieCount { get; set; }
     public int? SpiceLevel { get; set; }
-    public string? Tags { get; set; }
+    public List<string>? Tags { get; set; }
     public int? SortOrder { get; set; }
     public TimeOnly? AvailableFrom { get; set; }
     public TimeOnly? AvailableTo { get; set; }

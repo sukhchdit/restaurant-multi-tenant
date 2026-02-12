@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RestaurantManagement.Application.Interfaces;
 using RestaurantManagement.Domain.Entities;
 using RestaurantManagement.Domain.Enums;
@@ -103,6 +104,15 @@ public class ApplicationDbContext : Microsoft.EntityFrameworkCore.DbContext
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
         // Apply global query filters for multi-tenancy and soft delete
+        // Also register DateOnly value converters for Oracle MySQL provider compatibility
+        var dateOnlyConverter = new ValueConverter<DateOnly, DateTime>(
+            d => d.ToDateTime(TimeOnly.MinValue),
+            dt => DateOnly.FromDateTime(dt));
+
+        var nullableDateOnlyConverter = new ValueConverter<DateOnly?, DateTime?>(
+            d => d.HasValue ? d.Value.ToDateTime(TimeOnly.MinValue) : null,
+            dt => dt.HasValue ? DateOnly.FromDateTime(dt.Value) : null);
+
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             var clrType = entityType.ClrType;
@@ -111,7 +121,6 @@ public class ApplicationDbContext : Microsoft.EntityFrameworkCore.DbContext
 
             if (isTenantEntity && isBaseEntity)
             {
-                // Apply combined filter: tenant + soft delete
                 var method = typeof(ApplicationDbContext)
                     .GetMethod(nameof(ApplyCombinedQueryFilter),
                         System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
@@ -121,13 +130,25 @@ public class ApplicationDbContext : Microsoft.EntityFrameworkCore.DbContext
             }
             else if (isBaseEntity)
             {
-                // Apply soft delete filter only
                 var method = typeof(ApplicationDbContext)
                     .GetMethod(nameof(ApplySoftDeleteQueryFilter),
                         System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
                     .MakeGenericMethod(clrType);
 
                 method.Invoke(this, new object[] { modelBuilder });
+            }
+
+            // Apply DateOnly converters for MySQL compatibility
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(DateOnly))
+                {
+                    property.SetValueConverter(dateOnlyConverter);
+                }
+                else if (property.ClrType == typeof(DateOnly?))
+                {
+                    property.SetValueConverter(nullableDateOnlyConverter);
+                }
             }
         }
     }

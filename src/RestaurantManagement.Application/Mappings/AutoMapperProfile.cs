@@ -31,7 +31,11 @@ public class AutoMapperProfile : Profile
             .ForMember(d => d.SubCategories, opt => opt.MapFrom(s => s.SubCategories));
 
         CreateMap<MenuItem, MenuItemDto>()
-            .ForMember(d => d.CategoryName, opt => opt.MapFrom(s => s.Category != null ? s.Category.Name : string.Empty));
+            .ForMember(d => d.CategoryName, opt => opt.MapFrom(s => s.Category != null ? s.Category.Name : string.Empty))
+            .ForMember(d => d.Tags, opt => opt.MapFrom(s =>
+                !string.IsNullOrWhiteSpace(s.Tags)
+                    ? s.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
+                    : new List<string>()));
 
         CreateMap<CreateMenuItemDto, MenuItem>()
             .ForMember(d => d.Id, opt => opt.Ignore())
@@ -59,6 +63,10 @@ public class AutoMapperProfile : Profile
         CreateMap<KitchenOrderTicket, KOTDto>()
             .ForMember(d => d.OrderNumber, opt => opt.MapFrom(s => s.Order != null ? s.Order.OrderNumber : string.Empty))
             .ForMember(d => d.AssignedChefName, opt => opt.MapFrom(s => s.AssignedChef != null ? s.AssignedChef.FullName : null))
+            .ForMember(d => d.Priority, opt => opt.MapFrom(s =>
+                s.Priority >= 3 ? "urgent" :
+                s.Priority == 2 ? "high" :
+                s.Priority == 1 ? "medium" : "low"))
             .ForMember(d => d.Items, opt => opt.MapFrom(s => s.KOTItems));
 
         CreateMap<KOTItem, KOTItemDto>();
