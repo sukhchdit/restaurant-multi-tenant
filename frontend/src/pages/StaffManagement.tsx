@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { staffApi } from '@/services/api/staffApi';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select';
 import { Plus, Mail, Phone, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import type { Staff, StaffShift, CreateStaffRequest } from '@/types/staff.types';
 
 const shiftColors: Record<StaffShift, string> = {
@@ -48,6 +49,12 @@ export const StaffManagement = () => {
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [staffForm, setStaffForm] = useState<CreateStaffRequest>({ ...emptyStaffForm });
   const queryClient = useQueryClient();
+
+  const pageShortcuts = useMemo(() => ({
+    'n': () => setAddDialogOpen(true),
+  }), []);
+
+  useKeyboardShortcuts(pageShortcuts);
 
   const { data: staffResponse, isLoading } = useQuery({
     queryKey: ['staff'],
@@ -183,7 +190,7 @@ export const StaffManagement = () => {
       {/* Staff List */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {staff.map((member) => (
-          <Card key={member.id} className="transition-all hover:shadow-lg">
+          <Card key={member.id} className="border border-primary/20 bg-primary/[0.03] transition-all hover:border-primary/40 hover:shadow-lg">
             <CardContent className="p-6">
               <div className="space-y-4">
                 <div className="flex items-start gap-4">
@@ -253,7 +260,7 @@ export const StaffManagement = () => {
 
       {/* Edit Staff Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={(open) => { setEditDialogOpen(open); if (!open) setEditingStaff(null); }}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Staff Member</DialogTitle>
             <DialogDescription>Update staff member details.</DialogDescription>
@@ -372,7 +379,7 @@ export const StaffManagement = () => {
 
       {/* Add Staff Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Staff Member</DialogTitle>
             <DialogDescription>Add a new member to your restaurant team.</DialogDescription>

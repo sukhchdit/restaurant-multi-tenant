@@ -19,6 +19,7 @@ export interface MenuItem {
   price: number;
   discountedPrice?: number;
   isVeg: boolean;
+  isHalf: boolean;
   isAvailable: boolean;
   preparationTime: number;
   imageUrl?: string;
@@ -43,6 +44,7 @@ export interface CreateMenuItemRequest {
   cuisine?: string;
   price: number;
   isVeg: boolean;
+  isHalf: boolean;
   preparationTime: number;
   tags?: string[];
 }

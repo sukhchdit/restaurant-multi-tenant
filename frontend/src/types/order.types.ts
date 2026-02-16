@@ -15,11 +15,20 @@ export interface Order {
   orderType: OrderType;
   status: OrderStatus;
   items: OrderItem[];
+  waiterName?: string;
   subTotal: number;
   discountAmount: number;
   taxAmount: number;
   deliveryCharge: number;
   totalAmount: number;
+  discountPercentage: number;
+  extraCharges: number;
+  isGstApplied: boolean;
+  gstPercentage: number;
+  gstAmount: number;
+  vatPercentage: number;
+  vatAmount: number;
+  paidAmount: number;
   paymentStatus: PaymentStatus;
   paymentMethod?: string;
   specialNotes?: string;
@@ -44,20 +53,36 @@ export interface CreateOrderRequest {
   customerId?: string;
   customerName?: string;
   customerPhone?: string;
+  waiterId?: string;
   orderType: OrderType;
   items: CreateOrderItemRequest[];
   specialNotes?: string;
   discountId?: string;
+  paymentMethod?: string;
+  discountPercentage?: number;
+  extraCharges?: number;
+  isGstApplied?: boolean;
+  gstPercentage?: number;
+  vatPercentage?: number;
+  paidAmount?: number;
 }
 
 export interface UpdateOrderRequest {
   tableId?: string;
   customerName?: string;
   customerPhone?: string;
+  waiterId?: string;
   orderType?: OrderType;
   specialNotes?: string;
   deliveryAddress?: string;
   items?: CreateOrderItemRequest[];
+  paymentMethod?: string;
+  discountPercentage?: number;
+  extraCharges?: number;
+  isGstApplied?: boolean;
+  gstPercentage?: number;
+  vatPercentage?: number;
+  paidAmount?: number;
 }
 
 export interface CreateOrderItemRequest {

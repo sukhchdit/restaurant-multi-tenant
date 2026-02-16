@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '@/store/store';
@@ -19,6 +20,8 @@ import {
   Receipt,
   BookOpen,
   ClipboardList,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { cn } from '@/components/ui/utils';
 
@@ -120,9 +123,25 @@ const navItems: NavItem[] = [
   },
 ];
 
+const STORAGE_KEY = 'sidebar-collapsed';
+
 export const Sidebar = () => {
   const { user } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch<AppDispatch>();
+
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, String(collapsed));
+    } catch { /* ignore */ }
+  }, [collapsed]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -134,36 +153,45 @@ export const Sidebar = () => {
   });
 
   return (
-    <aside className="flex w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+    <aside
+      className={cn(
+        'flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300',
+        collapsed ? 'w-[68px]' : 'w-64'
+      )}
+    >
       {/* Logo & Restaurant Info */}
-      <div className="border-b border-sidebar-border p-6">
+      <div className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary">
             <ChefHat className="h-6 w-6 text-primary-foreground" />
           </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="truncate font-semibold text-sidebar-foreground">
-              {user?.restaurantName || 'Restaurant'}
-            </h2>
-            <p className="truncate text-xs text-sidebar-foreground/60">
-              {user?.role.replace(/([A-Z])/g, ' $1').trim()}
-            </p>
-          </div>
+          {!collapsed && (
+            <div className="flex-1 min-w-0">
+              <h2 className="truncate font-semibold text-sidebar-foreground">
+                {user?.restaurantName || 'Restaurant'}
+              </h2>
+              <p className="truncate text-xs text-sidebar-foreground/60">
+                {user?.role.replace(/([A-Z])/g, ' $1').trim()}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-4">
+      <nav className="flex-1 overflow-y-auto p-2">
         <ul className="space-y-1">
           {filteredNavItems.map((item) => (
             <li key={item.path}>
               <NavLink
                 to={item.path}
                 end={item.path === '/'}
+                title={collapsed ? item.name : undefined}
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200',
                     'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                    collapsed && 'justify-center px-0',
                     isActive
                       ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
                       : 'text-sidebar-foreground/80'
@@ -172,8 +200,8 @@ export const Sidebar = () => {
               >
                 {({ isActive }) => (
                   <>
-                    <item.icon className={cn('h-5 w-5', isActive ? 'opacity-100' : 'opacity-70')} />
-                    <span className="font-medium">{item.name}</span>
+                    <item.icon className={cn('h-5 w-5 shrink-0', isActive ? 'opacity-100' : 'opacity-70')} />
+                    {!collapsed && <span className="font-medium">{item.name}</span>}
                   </>
                 )}
               </NavLink>
@@ -183,30 +211,69 @@ export const Sidebar = () => {
       </nav>
 
       {/* User Profile & Logout */}
-      <div className="border-t border-sidebar-border p-4">
-        <div className="mb-3 flex items-center gap-3 rounded-lg bg-sidebar-accent p-3">
-          {user?.avatarUrl ? (
-            <img
-              src={user.avatarUrl}
-              alt={user.fullName}
-              className="h-10 w-10 rounded-full"
-            />
-          ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              {user?.fullName.charAt(0)}
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="truncate font-medium text-sidebar-accent-foreground">{user?.fullName}</p>
-            <p className="truncate text-xs text-sidebar-accent-foreground/60">{user?.email}</p>
+      <div className="border-t border-sidebar-border p-2">
+        {/* User info */}
+        {collapsed ? (
+          <div className="mb-2 flex justify-center" title={user?.fullName}>
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.fullName}
+                className="h-9 w-9 rounded-full"
+              />
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
+                {user?.fullName.charAt(0)}
+              </div>
+            )}
           </div>
-        </div>
+        ) : (
+          <div className="mb-2 flex items-center gap-3 rounded-lg bg-sidebar-accent p-3">
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.fullName}
+                className="h-10 w-10 rounded-full"
+              />
+            ) : (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                {user?.fullName.charAt(0)}
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="truncate font-medium text-sidebar-accent-foreground">{user?.fullName}</p>
+              <p className="truncate text-xs text-sidebar-accent-foreground/60">{user?.email}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Logout */}
         <button
           onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/80 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          title={collapsed ? 'Logout' : undefined}
+          className={cn(
+            'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/80 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+            collapsed && 'justify-center px-0'
+          )}
         >
-          <LogOut className="h-5 w-5" />
-          <span className="font-medium">Logout</span>
+          <LogOut className="h-5 w-5 shrink-0" />
+          {!collapsed && <span className="font-medium">Logout</span>}
+        </button>
+
+        {/* Collapse toggle */}
+        <button
+          onClick={() => setCollapsed((c) => !c)}
+          className={cn(
+            'mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/80 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+            collapsed && 'justify-center px-0'
+          )}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed
+            ? <PanelLeftOpen className="h-5 w-5 shrink-0" />
+            : <PanelLeftClose className="h-5 w-5 shrink-0" />
+          }
+          {!collapsed && <span className="font-medium">Collapse</span>}
         </button>
       </div>
     </aside>

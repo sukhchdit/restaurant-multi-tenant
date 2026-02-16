@@ -183,7 +183,7 @@ export const Dashboard = () => {
               recentOrders.slice(0, 5).map((order) => (
                 <div
                   key={order.id}
-                  className="flex items-center justify-between rounded-lg border border-border p-4 transition-all hover:shadow-md"
+                  className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/[0.03] p-4 transition-all hover:border-primary/40 hover:shadow-md"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
@@ -193,7 +193,7 @@ export const Dashboard = () => {
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {order.tableNumber || 'No table'} - {order.items.length} items
+                      {order.tableNumber || 'No table'} &bull; {order.items.length} items
                     </p>
                   </div>
                   <div className="text-right">

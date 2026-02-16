@@ -102,7 +102,7 @@ export const KitchenDisplay = () => {
             <Skeleton key={i} className="h-20" />
           ))}
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-64" />
           ))}
@@ -199,13 +199,13 @@ export const KitchenDisplay = () => {
       </div>
 
       {/* Orders Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {activeKOTs
           .sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime())
           .map((kot) => (
             <Card
               key={kot.id}
-              className={`border-2 ${getPriorityColor(kot.priority)} transition-all hover:shadow-xl`}
+              className={`border-2 bg-primary/[0.03] ${getPriorityColor(kot.priority)} transition-all hover:shadow-xl`}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">

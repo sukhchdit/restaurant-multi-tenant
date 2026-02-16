@@ -10,7 +10,11 @@ import { ChefHat, Mail, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
 const demoAccounts = [
-  { email: 'admin@restaurant.com', role: 'Super Admin' },
+  { email: 'admin@restaurant.com', role: 'Restaurant Admin' },
+  { email: 'manager@restaurant.com', role: 'Manager' },
+  { email: 'kitchen@restaurant.com', role: 'Kitchen' },
+  { email: 'waiter@restaurant.com', role: 'Waiter' },
+  { email: 'cashier@restaurant.com', role: 'Cashier' },
 ];
 
 export const Login = () => {
@@ -111,7 +115,7 @@ export const Login = () => {
                       <Input
                         id="password"
                         type="password"
-                        placeholder="Enter your password"
+                        placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="pl-10"

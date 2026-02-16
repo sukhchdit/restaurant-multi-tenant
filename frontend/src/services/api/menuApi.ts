@@ -13,8 +13,18 @@ export const menuApi = {
     return response.data;
   },
 
+  updateCategory: async (id: string, data: { name: string; description?: string }): Promise<ApiResponse<Category>> => {
+    const response = await axiosInstance.put(`/menu/categories/${id}`, data);
+    return response.data;
+  },
+
+  deleteCategory: async (id: string): Promise<ApiResponse<null>> => {
+    const response = await axiosInstance.delete(`/menu/categories/${id}`);
+    return response.data;
+  },
+
   getItems: async (params?: {
-    category?: string;
+    categoryId?: string;
     search?: string;
     isVeg?: boolean;
     isAvailable?: boolean;

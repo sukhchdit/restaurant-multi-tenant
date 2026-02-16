@@ -142,7 +142,7 @@ export const Inventory = () => {
             new Date(item.expiryDate).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000;
 
           return (
-            <Card key={item.id} className="transition-all hover:shadow-lg">
+            <Card key={item.id} className="border border-primary/20 bg-primary/[0.03] transition-all hover:border-primary/40 hover:shadow-lg">
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-start justify-between">
@@ -160,7 +160,7 @@ export const Inventory = () => {
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        Unit: {item.unit} - Cost: ${item.costPerUnit.toFixed(2)}/{item.unit}
+                        Unit: {item.unit} &bull; Cost: ${item.costPerUnit.toFixed(2)}/{item.unit}
                       </p>
                     </div>
                     <div className="text-right">
@@ -168,7 +168,7 @@ export const Inventory = () => {
                         {item.currentStock} {item.unit}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Min: {item.minStock} - Max: {item.maxStock}
+                        Min: {item.minStock} &bull; Max: {item.maxStock}
                       </p>
                     </div>
                   </div>
