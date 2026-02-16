@@ -10,6 +10,7 @@ public class MenuItem : TenantEntity
     public decimal Price { get; set; }
     public decimal? DiscountedPrice { get; set; }
     public bool IsVeg { get; set; } = false;
+    public bool IsHalf { get; set; } = false;
     public bool IsAvailable { get; set; } = true;
     public int? PreparationTime { get; set; }
     public string? ImageUrl { get; set; }

@@ -9,6 +9,7 @@ public class UpdateMenuItemDto
     public decimal? Price { get; set; }
     public decimal? DiscountedPrice { get; set; }
     public bool? IsVeg { get; set; }
+    public bool? IsHalf { get; set; }
     public int? PreparationTime { get; set; }
     public string? ImageUrl { get; set; }
     public int? CalorieCount { get; set; }

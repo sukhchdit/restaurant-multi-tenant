@@ -38,6 +38,27 @@ public class MenuController : ControllerBase
         return StatusCode(result.StatusCode, result);
     }
 
+    [HttpPut("categories/{id:guid}")]
+    [Authorize(Policy = Permissions.MenuUpdate)]
+    [ProducesResponseType(typeof(ApiResponse<CategoryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateCategory(Guid id, [FromBody] CategoryDto dto, CancellationToken cancellationToken)
+    {
+        var result = await _menuService.UpdateCategoryAsync(id, dto, cancellationToken);
+        return StatusCode(result.StatusCode, result);
+    }
+
+    [HttpDelete("categories/{id:guid}")]
+    [Authorize(Policy = Permissions.MenuDelete)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteCategory(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _menuService.DeleteCategoryAsync(id, cancellationToken);
+        return StatusCode(result.StatusCode, result);
+    }
+
     [HttpGet("items")]
     [Authorize(Policy = Permissions.MenuView)]
     [ProducesResponseType(typeof(ApiResponse<List<MenuItemDto>>), StatusCodes.Status200OK)]

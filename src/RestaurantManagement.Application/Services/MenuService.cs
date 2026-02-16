@@ -54,6 +54,12 @@ public class MenuService : IMenuService
         if (restaurantId == null)
             return ApiResponse<CategoryDto>.Fail("Restaurant context not found.", 403);
 
+        var duplicateExists = await _categoryRepository.Query()
+            .AnyAsync(c => c.RestaurantId == restaurantId.Value && !c.IsDeleted
+                && c.Name.ToLower() == dto.Name.Trim().ToLower(), cancellationToken);
+        if (duplicateExists)
+            return ApiResponse<CategoryDto>.Fail($"A category named \"{dto.Name.Trim()}\" already exists.", 409);
+
         var category = new Category
         {
             RestaurantId = restaurantId.Value,
@@ -72,6 +78,63 @@ public class MenuService : IMenuService
 
         var result = _mapper.Map<CategoryDto>(category);
         return ApiResponse<CategoryDto>.Ok(result, "Category created successfully.");
+    }
+
+    public async Task<ApiResponse<CategoryDto>> UpdateCategoryAsync(Guid id, CategoryDto dto, CancellationToken cancellationToken = default)
+    {
+        var restaurantId = _currentUser.RestaurantId;
+        if (restaurantId == null)
+            return ApiResponse<CategoryDto>.Fail("Restaurant context not found.", 403);
+
+        var category = await _categoryRepository.Query()
+            .FirstOrDefaultAsync(c => c.Id == id && c.RestaurantId == restaurantId.Value && !c.IsDeleted, cancellationToken);
+
+        if (category == null)
+            return ApiResponse<CategoryDto>.Fail("Category not found.", 404);
+
+        var duplicateExists = await _categoryRepository.Query()
+            .AnyAsync(c => c.RestaurantId == restaurantId.Value && !c.IsDeleted
+                && c.Id != id && c.Name.ToLower() == dto.Name.Trim().ToLower(), cancellationToken);
+        if (duplicateExists)
+            return ApiResponse<CategoryDto>.Fail($"A category named \"{dto.Name.Trim()}\" already exists.", 409);
+
+        category.Name = dto.Name;
+        category.Description = dto.Description;
+        category.SortOrder = dto.SortOrder;
+        category.ImageUrl = dto.ImageUrl;
+        category.IsActive = dto.IsActive;
+        category.UpdatedBy = _currentUser.UserId;
+        category.UpdatedAt = DateTime.UtcNow;
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var result = _mapper.Map<CategoryDto>(category);
+        return ApiResponse<CategoryDto>.Ok(result, "Category updated successfully.");
+    }
+
+    public async Task<ApiResponse> DeleteCategoryAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var restaurantId = _currentUser.RestaurantId;
+        if (restaurantId == null)
+            return ApiResponse.Fail("Restaurant context not found.", 403);
+
+        var category = await _categoryRepository.Query()
+            .Include(c => c.MenuItems.Where(m => !m.IsDeleted))
+            .FirstOrDefaultAsync(c => c.Id == id && c.RestaurantId == restaurantId.Value && !c.IsDeleted, cancellationToken);
+
+        if (category == null)
+            return ApiResponse.Fail("Category not found.", 404);
+
+        if (category.MenuItems.Any())
+            return ApiResponse.Fail("Cannot delete a category that has menu items. Remove or reassign items first.", 400);
+
+        category.IsDeleted = true;
+        category.DeletedAt = DateTime.UtcNow;
+        category.DeletedBy = _currentUser.UserId;
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return ApiResponse.Ok("Category deleted successfully.");
     }
 
     public async Task<ApiResponse<PaginatedResultDto<MenuItemDto>>> GetItemsAsync(
@@ -153,6 +216,7 @@ public class MenuService : IMenuService
             Cuisine = dto.Cuisine,
             Price = dto.Price,
             IsVeg = dto.IsVeg,
+            IsHalf = dto.IsHalf,
             PreparationTime = dto.PreparationTime,
             Tags = dto.Tags != null && dto.Tags.Count > 0 ? string.Join(",", dto.Tags) : null,
             IsAvailable = true,
@@ -193,6 +257,7 @@ public class MenuService : IMenuService
         if (dto.Price.HasValue) item.Price = dto.Price.Value;
         if (dto.DiscountedPrice.HasValue) item.DiscountedPrice = dto.DiscountedPrice.Value;
         if (dto.IsVeg.HasValue) item.IsVeg = dto.IsVeg.Value;
+        if (dto.IsHalf.HasValue) item.IsHalf = dto.IsHalf.Value;
         if (dto.PreparationTime.HasValue) item.PreparationTime = dto.PreparationTime.Value;
         if (dto.ImageUrl != null) item.ImageUrl = dto.ImageUrl;
         if (dto.CalorieCount.HasValue) item.CalorieCount = dto.CalorieCount.Value;

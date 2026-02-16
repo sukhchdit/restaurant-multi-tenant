@@ -12,6 +12,7 @@ public class MenuItemDto
     public decimal Price { get; set; }
     public decimal? DiscountedPrice { get; set; }
     public bool IsVeg { get; set; }
+    public bool IsHalf { get; set; }
     public bool IsAvailable { get; set; }
     public int? PreparationTime { get; set; }
     public string? ImageUrl { get; set; }

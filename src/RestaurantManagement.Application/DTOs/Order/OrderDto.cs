@@ -21,6 +21,14 @@ public class OrderDto
     public decimal TaxAmount { get; set; }
     public decimal DeliveryCharge { get; set; }
     public decimal TotalAmount { get; set; }
+    public decimal DiscountPercentage { get; set; }
+    public decimal ExtraCharges { get; set; }
+    public bool IsGstApplied { get; set; }
+    public decimal GstPercentage { get; set; }
+    public decimal GstAmount { get; set; }
+    public decimal VatPercentage { get; set; }
+    public decimal VatAmount { get; set; }
+    public decimal PaidAmount { get; set; }
     public PaymentStatus PaymentStatus { get; set; }
     public PaymentMethod? PaymentMethod { get; set; }
     public string? SpecialNotes { get; set; }

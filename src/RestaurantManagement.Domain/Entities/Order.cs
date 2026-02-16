@@ -20,6 +20,14 @@ public class Order : TenantEntity
     public decimal TaxAmount { get; set; } = 0;
     public decimal DeliveryCharge { get; set; } = 0;
     public decimal TotalAmount { get; set; }
+    public decimal DiscountPercentage { get; set; }
+    public decimal ExtraCharges { get; set; }
+    public bool IsGstApplied { get; set; }
+    public decimal GstPercentage { get; set; }
+    public decimal GstAmount { get; set; }
+    public decimal VatPercentage { get; set; }
+    public decimal VatAmount { get; set; }
+    public decimal PaidAmount { get; set; }
     public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Pending;
     public PaymentMethod? PaymentMethod { get; set; }
     public string? SpecialNotes { get; set; }

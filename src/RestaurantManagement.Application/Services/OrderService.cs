@@ -137,9 +137,13 @@ public class OrderService : IOrderService
         try
         {
             var menuItemIds = dto.Items.Select(i => i.MenuItemId).Distinct().ToArray();
-            var menuItems = await _menuItemRepository.Query()
-                .Where(m => menuItemIds.Contains(m.Id) && !m.IsDeleted && m.IsAvailable)
-                .ToListAsync(cancellationToken);
+            var menuItems = new List<MenuItem>();
+            foreach (var id in menuItemIds)
+            {
+                var mi = await _menuItemRepository.Query()
+                    .FirstOrDefaultAsync(m => m.Id == id && !m.IsDeleted && m.IsAvailable, cancellationToken);
+                if (mi != null) menuItems.Add(mi);
+            }
 
             if (menuItems.Count != menuItemIds.Length)
                 return ApiResponse<OrderDto>.Fail("One or more menu items are not available.");
@@ -193,38 +197,31 @@ public class OrderService : IOrderService
 
             order.SubTotal = subTotal;
 
-            // Apply discount
-            if (dto.DiscountId.HasValue)
-            {
-                var discount = await _discountRepository.GetByIdAsync(dto.DiscountId.Value, cancellationToken);
-                if (discount != null && discount.IsActive)
-                {
-                    if (discount.DiscountType == DiscountType.Percentage)
-                    {
-                        order.DiscountAmount = Math.Round(subTotal * discount.Value / 100, 2);
-                        if (discount.MaxDiscountAmount.HasValue && order.DiscountAmount > discount.MaxDiscountAmount.Value)
-                            order.DiscountAmount = discount.MaxDiscountAmount.Value;
-                    }
-                    else
-                    {
-                        order.DiscountAmount = discount.Value;
-                    }
-                }
-            }
-
-            // Calculate tax
-            var taxConfigs = await _taxConfigRepository.FindAsync(
-                t => t.RestaurantId == restaurantId.Value && t.IsActive && !t.IsDeleted, cancellationToken);
+            // Manual pricing from DTO
+            order.DiscountPercentage = dto.DiscountPercentage;
+            order.DiscountAmount = Math.Round(subTotal * dto.DiscountPercentage / 100, 2);
 
             decimal taxableAmount = subTotal - order.DiscountAmount;
-            decimal totalTax = 0;
-            foreach (var tax in taxConfigs)
-            {
-                totalTax += Math.Round(taxableAmount * tax.Rate / 100, 2);
-            }
-            order.TaxAmount = totalTax;
-            order.TotalAmount = taxableAmount + totalTax + order.DeliveryCharge;
-            order.PaymentStatus = PaymentStatus.Pending;
+
+            order.IsGstApplied = dto.IsGstApplied;
+            order.GstPercentage = dto.GstPercentage;
+            order.GstAmount = dto.IsGstApplied ? Math.Round(taxableAmount * dto.GstPercentage / 100, 2) : 0;
+
+            order.VatPercentage = dto.VatPercentage;
+            order.VatAmount = Math.Round(taxableAmount * dto.VatPercentage / 100, 2);
+
+            order.TaxAmount = order.GstAmount + order.VatAmount;
+            order.ExtraCharges = dto.ExtraCharges;
+            order.TotalAmount = taxableAmount + order.TaxAmount + dto.ExtraCharges;
+
+            order.WaiterId = dto.WaiterId;
+            order.PaymentMethod = dto.PaymentMethod;
+            order.PaidAmount = dto.PaidAmount;
+            order.PaymentStatus = dto.PaidAmount >= order.TotalAmount
+                ? PaymentStatus.Paid
+                : dto.PaidAmount > 0
+                    ? PaymentStatus.PartiallyPaid
+                    : PaymentStatus.Pending;
 
             await _orderRepository.AddAsync(order, cancellationToken);
             await _orderItemRepository.AddRangeAsync(orderItems, cancellationToken);
@@ -362,12 +359,18 @@ public class OrderService : IOrderService
             if (dto.Items.Count == 0)
                 return ApiResponse<OrderDto>.Fail("Order must have at least one item.");
 
-            var menuItemIds = dto.Items.Select(i => i.MenuItemId).Distinct().ToArray();
-            var menuItems = await _menuItemRepository.Query()
-                .Where(m => menuItemIds.Contains(m.Id) && !m.IsDeleted && m.IsAvailable)
-                .ToListAsync(cancellationToken);
+            // Fetch each menu item individually to avoid MySql.EntityFrameworkCore
+            // provider bug with Guid[].Contains() in parameterized IN clauses
+            var menuItemIds = dto.Items.Select(i => i.MenuItemId).Distinct().ToList();
+            var menuItems = new List<MenuItem>();
+            foreach (var mid in menuItemIds)
+            {
+                var mi = await _menuItemRepository.Query()
+                    .FirstOrDefaultAsync(m => m.Id == mid && !m.IsDeleted && m.IsAvailable, cancellationToken);
+                if (mi != null) menuItems.Add(mi);
+            }
 
-            if (menuItems.Count != menuItemIds.Length)
+            if (menuItems.Count != menuItemIds.Count)
                 return ApiResponse<OrderDto>.Fail("One or more menu items are not available.");
 
             var existingItems = order.OrderItems.Where(oi => !oi.IsDeleted).ToList();
@@ -430,7 +433,6 @@ public class OrderService : IOrderService
                 await _orderItemRepository.AddRangeAsync(newOrderItems, cancellationToken);
 
             // Recalculate totals
-            // Gather all active items: updated existing + newly added
             decimal newSubTotal = 0;
             foreach (var itemDto in dto.Items)
             {
@@ -440,42 +442,39 @@ public class OrderService : IOrderService
             }
 
             order.SubTotal = newSubTotal;
+        }
 
-            // Re-apply discount
-            if (order.DiscountId.HasValue)
-            {
-                var discount = await _discountRepository.GetByIdAsync(order.DiscountId.Value, cancellationToken);
-                if (discount != null && discount.IsActive)
-                {
-                    if (discount.DiscountType == DiscountType.Percentage)
-                    {
-                        order.DiscountAmount = Math.Round(newSubTotal * discount.Value / 100, 2);
-                        if (discount.MaxDiscountAmount.HasValue && order.DiscountAmount > discount.MaxDiscountAmount.Value)
-                            order.DiscountAmount = discount.MaxDiscountAmount.Value;
-                    }
-                    else
-                    {
-                        order.DiscountAmount = discount.Value;
-                    }
-                }
-            }
-            else
-            {
-                order.DiscountAmount = 0;
-            }
+        // Apply manual pricing fields if provided
+        if (dto.DiscountPercentage.HasValue)
+            order.DiscountPercentage = dto.DiscountPercentage.Value;
+        if (dto.ExtraCharges.HasValue)
+            order.ExtraCharges = dto.ExtraCharges.Value;
+        if (dto.IsGstApplied.HasValue)
+            order.IsGstApplied = dto.IsGstApplied.Value;
+        if (dto.GstPercentage.HasValue)
+            order.GstPercentage = dto.GstPercentage.Value;
+        if (dto.VatPercentage.HasValue)
+            order.VatPercentage = dto.VatPercentage.Value;
+        if (dto.WaiterId.HasValue)
+            order.WaiterId = dto.WaiterId.Value;
+        if (dto.PaymentMethod.HasValue)
+            order.PaymentMethod = dto.PaymentMethod.Value;
+        if (dto.PaidAmount.HasValue)
+            order.PaidAmount = dto.PaidAmount.Value;
 
-            // Recalculate tax
-            var taxConfigs = await _taxConfigRepository.FindAsync(
-                t => t.RestaurantId == restaurantId.Value && t.IsActive && !t.IsDeleted, cancellationToken);
-
-            decimal taxableAmount = newSubTotal - order.DiscountAmount;
-            decimal totalTax = 0;
-            foreach (var tax in taxConfigs)
-            {
-                totalTax += Math.Round(taxableAmount * tax.Rate / 100, 2);
-            }
-            order.TaxAmount = totalTax;
-            order.TotalAmount = taxableAmount + totalTax + order.DeliveryCharge;
+        // Recalculate totals from current order state
+        {
+            order.DiscountAmount = Math.Round(order.SubTotal * order.DiscountPercentage / 100, 2);
+            decimal taxableAmount = order.SubTotal - order.DiscountAmount;
+            order.GstAmount = order.IsGstApplied ? Math.Round(taxableAmount * order.GstPercentage / 100, 2) : 0;
+            order.VatAmount = Math.Round(taxableAmount * order.VatPercentage / 100, 2);
+            order.TaxAmount = order.GstAmount + order.VatAmount;
+            order.TotalAmount = taxableAmount + order.TaxAmount + order.ExtraCharges;
+            order.PaymentStatus = order.PaidAmount >= order.TotalAmount
+                ? PaymentStatus.Paid
+                : order.PaidAmount > 0
+                    ? PaymentStatus.PartiallyPaid
+                    : PaymentStatus.Pending;
         }
 
         order.UpdatedAt = DateTime.UtcNow;

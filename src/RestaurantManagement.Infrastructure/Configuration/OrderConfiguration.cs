@@ -53,6 +53,37 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.TotalAmount)
             .HasPrecision(12, 2);
 
+        builder.Property(o => o.DiscountPercentage)
+            .HasPrecision(5, 2)
+            .HasDefaultValue(0m);
+
+        builder.Property(o => o.ExtraCharges)
+            .HasPrecision(12, 2)
+            .HasDefaultValue(0m);
+
+        builder.Property(o => o.IsGstApplied)
+            .HasDefaultValue(false);
+
+        builder.Property(o => o.GstPercentage)
+            .HasPrecision(5, 2)
+            .HasDefaultValue(0m);
+
+        builder.Property(o => o.GstAmount)
+            .HasPrecision(12, 2)
+            .HasDefaultValue(0m);
+
+        builder.Property(o => o.VatPercentage)
+            .HasPrecision(5, 2)
+            .HasDefaultValue(0m);
+
+        builder.Property(o => o.VatAmount)
+            .HasPrecision(12, 2)
+            .HasDefaultValue(0m);
+
+        builder.Property(o => o.PaidAmount)
+            .HasPrecision(12, 2)
+            .HasDefaultValue(0m);
+
         builder.Property(o => o.OrderType)
             .HasConversion<string>()
             .HasMaxLength(20)

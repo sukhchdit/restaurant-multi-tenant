@@ -8,6 +8,7 @@ public class CreateMenuItemDto
     public string? Cuisine { get; set; }
     public decimal Price { get; set; }
     public bool IsVeg { get; set; }
+    public bool IsHalf { get; set; }
     public int? PreparationTime { get; set; }
     public List<string>? Tags { get; set; }
 }
