@@ -21,13 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import {
   Search, Plus, Eye, Trash2, Clock, CheckCircle, Minus, Pencil,
   List, Columns2, Columns3, Columns4, ClipboardList,
@@ -37,6 +31,7 @@ import {
 import { cn } from '@/components/ui/utils';
 import { toast } from 'sonner';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useOrderSignalR } from '@/hooks/useOrderSignalR';
 import { KeyboardShortcutHint } from '@/components/keyboard/KeyboardShortcutHint';
 import { printBill } from '@/components/order/PrintBill';
 import type { Order, OrderStatus, OrderType, CreateOrderRequest, UpdateOrderRequest } from '@/types/order.types';
@@ -224,6 +219,7 @@ export const OrderManagement = () => {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  useOrderSignalR();
 
   // ── Queries ──
   const { data: ordersResponse, isLoading } = useQuery({
@@ -829,30 +825,31 @@ export const OrderManagement = () => {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
               <div className="space-y-2">
                 <Label className="font-medium">Order Type *</Label>
-                <Select value={orderType} onValueChange={setOrderType}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dine-in">Dine In</SelectItem>
-                    <SelectItem value="takeaway">Takeaway</SelectItem>
-                    <SelectItem value="delivery">Delivery</SelectItem>
-                    <SelectItem value="online">Online</SelectItem>
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={orderType}
+                  onValueChange={setOrderType}
+                  options={[
+                    { value: 'dine-in', label: 'Dine In' },
+                    { value: 'takeaway', label: 'Takeaway' },
+                    { value: 'delivery', label: 'Delivery' },
+                    { value: 'online', label: 'Online' },
+                  ]}
+                  placeholder="Select type"
+                />
               </div>
 
               {orderType === 'dine-in' ? (
                 <div className="space-y-2">
                   <Label className="font-medium">Table No</Label>
-                  <Select value={selectedTableId} onValueChange={setSelectedTableId}>
-                    <SelectTrigger><SelectValue placeholder="Select table" /></SelectTrigger>
-                    <SelectContent>
-                      {newOrderTables.map((table) => (
-                        <SelectItem key={table.id} value={table.id}>
-                          {table.tableNumber} ({table.capacity} seats)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    value={selectedTableId}
+                    onValueChange={setSelectedTableId}
+                    options={newOrderTables.map((table) => ({
+                      value: table.id,
+                      label: `${table.tableNumber} (${table.capacity} seats)`,
+                    }))}
+                    placeholder="Select table"
+                  />
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -863,14 +860,15 @@ export const OrderManagement = () => {
 
               <div className="space-y-2">
                 <Label className="font-medium">Waiter</Label>
-                <Select value={waiterId} onValueChange={setWaiterId}>
-                  <SelectTrigger><SelectValue placeholder="Select waiter" /></SelectTrigger>
-                  <SelectContent>
-                    {waiters.map((w) => (
-                      <SelectItem key={w.id} value={w.id}>{w.fullName}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={waiterId}
+                  onValueChange={setWaiterId}
+                  options={waiters.map((w) => ({
+                    value: w.id,
+                    label: w.fullName,
+                  }))}
+                  placeholder="Select waiter"
+                />
               </div>
 
               <div className="space-y-2">
@@ -1002,15 +1000,17 @@ export const OrderManagement = () => {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
                   <div className="space-y-2">
                     <Label className="text-xs font-medium">Payment Mode</Label>
-                    <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="card">Card</SelectItem>
-                        <SelectItem value="upi">UPI</SelectItem>
-                        <SelectItem value="online">Online</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      value={paymentMethod}
+                      onValueChange={setPaymentMethod}
+                      options={[
+                        { value: 'cash', label: 'Cash' },
+                        { value: 'card', label: 'Card' },
+                        { value: 'upi', label: 'UPI' },
+                        { value: 'online', label: 'Online' },
+                      ]}
+                      placeholder="Select payment"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-medium">Total Amount</Label>
@@ -1159,34 +1159,31 @@ export const OrderManagement = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Order Type</Label>
-                  <Select
+                  <SearchableSelect
                     value={editForm.orderType || editingOrder.orderType}
                     onValueChange={(value) => setEditForm({ ...editForm, orderType: value as OrderType })}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="dine-in">Dine In</SelectItem>
-                      <SelectItem value="takeaway">Takeaway</SelectItem>
-                      <SelectItem value="delivery">Delivery</SelectItem>
-                      <SelectItem value="online">Online</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    options={[
+                      { value: 'dine-in', label: 'Dine In' },
+                      { value: 'takeaway', label: 'Takeaway' },
+                      { value: 'delivery', label: 'Delivery' },
+                      { value: 'online', label: 'Online' },
+                    ]}
+                    placeholder="Select type"
+                  />
                 </div>
 
                 {(editForm.orderType || editingOrder.orderType) === 'dine-in' && (
                   <div className="space-y-2">
                     <Label>Table</Label>
-                    <Select value={editTableId} onValueChange={setEditTableId}>
-                      <SelectTrigger><SelectValue placeholder="Select table" /></SelectTrigger>
-                      <SelectContent>
-                        {editOrderTables.map((table) => (
-                          <SelectItem key={table.id} value={table.id}>
-                            {table.tableNumber} ({table.capacity} seats)
-                            {table.id === editingOrder.tableId ? ' (current)' : ''}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      value={editTableId}
+                      onValueChange={setEditTableId}
+                      options={editOrderTables.map((table) => ({
+                        value: table.id,
+                        label: `${table.tableNumber} (${table.capacity} seats)${table.id === editingOrder.tableId ? ' (current)' : ''}`,
+                      }))}
+                      placeholder="Select table"
+                    />
                   </div>
                 )}
               </div>

@@ -604,6 +604,18 @@ public class OrderService : IOrderService
         order.DeletedAt = DateTime.UtcNow;
         order.DeletedBy = _currentUser.UserId;
         order.DeletionReason = reason;
+
+        if (order.TableId.HasValue)
+        {
+            var table = await _tableRepository.GetByIdAsync(order.TableId.Value, cancellationToken);
+            if (table != null && table.CurrentOrderId == order.Id)
+            {
+                table.Status = TableStatus.Available;
+                table.CurrentOrderId = null;
+                _tableRepository.Update(table);
+            }
+        }
+
         _orderRepository.Update(order);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

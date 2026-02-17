@@ -15,13 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import {
   Table,
   TableBody,
@@ -450,18 +444,15 @@ export const Accounts = () => {
           <form onSubmit={handleAddEntry} className="space-y-4">
             <div className="space-y-2">
               <Label>Type</Label>
-              <Select
+              <SearchableSelect
                 value={entryType}
                 onValueChange={(v) => setEntryType(v as 'income' | 'expense')}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="income">Income</SelectItem>
-                  <SelectItem value="expense">Expense</SelectItem>
-                </SelectContent>
-              </Select>
+                options={[
+                  { value: 'income', label: 'Income' },
+                  { value: 'expense', label: 'Expense' },
+                ]}
+                placeholder="Select type"
+              />
             </div>
 
             <div className="space-y-2">
@@ -479,36 +470,31 @@ export const Accounts = () => {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Category</Label>
-                <Select
+                <SearchableSelect
                   value={formData.category}
                   onValueChange={(v) =>
                     setFormData({ ...formData, category: v })
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {entryType === 'income' ? (
-                      <>
-                        <SelectItem value="sales">Sales</SelectItem>
-                        <SelectItem value="delivery">Delivery</SelectItem>
-                        <SelectItem value="catering">Catering</SelectItem>
-                        <SelectItem value="other-income">Other</SelectItem>
-                      </>
-                    ) : (
-                      <>
-                        <SelectItem value="ingredients">Ingredients</SelectItem>
-                        <SelectItem value="utilities">Utilities</SelectItem>
-                        <SelectItem value="rent">Rent</SelectItem>
-                        <SelectItem value="salaries">Salaries</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                        <SelectItem value="marketing">Marketing</SelectItem>
-                        <SelectItem value="other-expense">Other</SelectItem>
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
+                  options={
+                    entryType === 'income'
+                      ? [
+                          { value: 'sales', label: 'Sales' },
+                          { value: 'delivery', label: 'Delivery' },
+                          { value: 'catering', label: 'Catering' },
+                          { value: 'other-income', label: 'Other' },
+                        ]
+                      : [
+                          { value: 'ingredients', label: 'Ingredients' },
+                          { value: 'utilities', label: 'Utilities' },
+                          { value: 'rent', label: 'Rent' },
+                          { value: 'salaries', label: 'Salaries' },
+                          { value: 'maintenance', label: 'Maintenance' },
+                          { value: 'marketing', label: 'Marketing' },
+                          { value: 'other-expense', label: 'Other' },
+                        ]
+                  }
+                  placeholder="Select category"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Amount ($)</Label>
@@ -528,22 +514,19 @@ export const Accounts = () => {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Payment Method</Label>
-                <Select
+                <SearchableSelect
                   value={formData.paymentMethod}
                   onValueChange={(v) =>
                     setFormData({ ...formData, paymentMethod: v })
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="card">Card</SelectItem>
-                    <SelectItem value="bank-transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="online">Online</SelectItem>
-                  </SelectContent>
-                </Select>
+                  options={[
+                    { value: 'cash', label: 'Cash' },
+                    { value: 'card', label: 'Card' },
+                    { value: 'bank-transfer', label: 'Bank Transfer' },
+                    { value: 'online', label: 'Online' },
+                  ]}
+                  placeholder="Select payment method"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Reference</Label>

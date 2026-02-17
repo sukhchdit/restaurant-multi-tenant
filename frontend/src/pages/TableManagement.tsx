@@ -20,13 +20,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import {
   Search, Plus, Pencil, Trash2, Minus,
   Leaf, Printer, RotateCcw, X,
@@ -34,6 +28,7 @@ import {
 import { cn } from '@/components/ui/utils';
 import { toast } from 'sonner';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useOrderSignalR } from '@/hooks/useOrderSignalR';
 import { KeyboardShortcutHint } from '@/components/keyboard/KeyboardShortcutHint';
 import { printBill } from '@/components/order/PrintBill';
 import type { RestaurantTable, TableStatus, CreateTableRequest } from '@/types/table.types';
@@ -204,6 +199,7 @@ export const TableManagement = () => {
   const [paidAmount, setPaidAmount] = useState(0);
 
   const queryClient = useQueryClient();
+  useOrderSignalR();
 
   const pageShortcuts = useMemo(() => ({
     'n': () => setAddDialogOpen(true),
@@ -673,15 +669,17 @@ export const TableManagement = () => {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
                 <div className="space-y-2">
                   <Label className="font-medium">Order Type *</Label>
-                  <Select value={orderType} onValueChange={setOrderType}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="dine-in">Dine In</SelectItem>
-                      <SelectItem value="takeaway">Takeaway</SelectItem>
-                      <SelectItem value="delivery">Delivery</SelectItem>
-                      <SelectItem value="online">Online</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    value={orderType}
+                    onValueChange={setOrderType}
+                    options={[
+                      { value: 'dine-in', label: 'Dine In' },
+                      { value: 'takeaway', label: 'Takeaway' },
+                      { value: 'delivery', label: 'Delivery' },
+                      { value: 'online', label: 'Online' },
+                    ]}
+                    placeholder="Select type"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -691,14 +689,15 @@ export const TableManagement = () => {
 
                 <div className="space-y-2">
                   <Label className="font-medium">Waiter</Label>
-                  <Select value={waiterId} onValueChange={setWaiterId}>
-                    <SelectTrigger><SelectValue placeholder="Select waiter" /></SelectTrigger>
-                    <SelectContent>
-                      {waiters.map((w) => (
-                        <SelectItem key={w.id} value={w.id}>{w.fullName}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    value={waiterId}
+                    onValueChange={setWaiterId}
+                    options={waiters.map((w) => ({
+                      value: w.id,
+                      label: w.fullName,
+                    }))}
+                    placeholder="Select waiter"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -833,15 +832,17 @@ export const TableManagement = () => {
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
                     <div className="space-y-2">
                       <Label className="text-xs font-medium">Payment Mode</Label>
-                      <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cash">Cash</SelectItem>
-                          <SelectItem value="card">Card</SelectItem>
-                          <SelectItem value="upi">UPI</SelectItem>
-                          <SelectItem value="online">Online</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        value={paymentMethod}
+                        onValueChange={setPaymentMethod}
+                        options={[
+                          { value: 'cash', label: 'Cash' },
+                          { value: 'card', label: 'Card' },
+                          { value: 'upi', label: 'UPI' },
+                          { value: 'online', label: 'Online' },
+                        ]}
+                        placeholder="Select payment"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs font-medium">Total Amount</Label>

@@ -2,13 +2,23 @@ import { useEffect, useRef, useCallback } from 'react';
 import { signalRService } from '@/services/signalr/signalRService';
 import type { HubConnection } from '@microsoft/signalr';
 
+type Handler = (...args: unknown[]) => void;
+
 export const useSignalR = (hubName: string) => {
   const connectionRef = useRef<HubConnection | null>(null);
+  const pendingRef = useRef<Map<string, Set<Handler>>>(new Map());
 
   useEffect(() => {
     const connect = async () => {
       try {
-        connectionRef.current = await signalRService.connect(hubName);
+        const connection = await signalRService.connect(hubName);
+        connectionRef.current = connection;
+
+        // Apply any handlers that were registered before the connection was ready
+        pendingRef.current.forEach((callbacks, event) => {
+          callbacks.forEach((cb) => connection.on(event, cb));
+        });
+        pendingRef.current.clear();
       } catch (error) {
         console.error(`Failed to connect to ${hubName} hub:`, error);
       }
@@ -17,17 +27,28 @@ export const useSignalR = (hubName: string) => {
     connect();
 
     return () => {
+      connectionRef.current = null;
+      pendingRef.current.clear();
       signalRService.disconnect(hubName);
     };
   }, [hubName]);
 
-  const on = useCallback((event: string, callback: (...args: unknown[]) => void) => {
+  const on = useCallback((event: string, callback: Handler) => {
     const connection = connectionRef.current;
     if (connection) {
       connection.on(event, callback);
-      return () => connection.off(event, callback);
+    } else {
+      // Connection not ready yet — queue the handler
+      if (!pendingRef.current.has(event)) {
+        pendingRef.current.set(event, new Set());
+      }
+      pendingRef.current.get(event)!.add(callback);
     }
-    return () => {};
+
+    return () => {
+      connectionRef.current?.off(event, callback);
+      pendingRef.current.get(event)?.delete(callback);
+    };
   }, []);
 
   const invoke = useCallback(async (method: string, ...args: unknown[]) => {

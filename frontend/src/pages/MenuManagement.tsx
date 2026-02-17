@@ -16,14 +16,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { CategoryDialog } from '@/components/CreateCategoryDialog';
 import { CategoryListDialog } from '@/components/CategoryListDialog';
 import { Switch } from '@/components/ui/switch';
@@ -527,14 +520,14 @@ export const MenuManagement = () => {
                 <Label htmlFor="editName" className="text-sm font-medium">Name *</Label>
                 <Input
                   id="editName"
-                  className="h-10"
+                  className="h-9"
                   value={editForm.name || ''}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Category *</Label>
-                <Select
+                <SearchableSelect
                   value={editForm.categoryId || ''}
                   onValueChange={(value) => {
                     if (value === CREATE_CATEGORY_SENTINEL) {
@@ -543,29 +536,24 @@ export const MenuManagement = () => {
                     }
                     setEditForm({ ...editForm, categoryId: value });
                   }}
-                >
-                  <SelectTrigger className="h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                    <SelectSeparator />
-                    <SelectItem value={CREATE_CATEGORY_SENTINEL} className="text-primary font-medium">
-                      <Plus className="mr-1 h-4 w-4 inline" />
-                      Add Category
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                  options={categories.map((cat) => ({
+                    value: cat.id,
+                    label: cat.name,
+                  }))}
+                  placeholder="Select category"
+                  footerOptions={[
+                    {
+                      value: CREATE_CATEGORY_SENTINEL,
+                      label: '+ Add Category',
+                    },
+                  ]}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="editPrice" className="text-sm font-medium">Price *</Label>
                 <Input
                   id="editPrice"
-                  className="h-10"
+                  className="h-9"
                   type="number"
                   min="0"
                   step="0.01"
@@ -590,7 +578,7 @@ export const MenuManagement = () => {
                 <Label htmlFor="editPrepTime" className="text-sm font-medium">Prep Time (min)</Label>
                 <Input
                   id="editPrepTime"
-                  className="h-10"
+                  className="h-9"
                   type="number"
                   min="1"
                   value={editForm.preparationTime || ''}
@@ -601,7 +589,7 @@ export const MenuManagement = () => {
                 <Label htmlFor="editCuisine" className="text-sm font-medium">Cuisine</Label>
                 <Input
                   id="editCuisine"
-                  className="h-10"
+                  className="h-9"
                   value={editForm.cuisine || ''}
                   onChange={(e) => setEditForm({ ...editForm, cuisine: e.target.value })}
                 />
@@ -639,7 +627,7 @@ export const MenuManagement = () => {
               <Label className="text-sm font-medium">Tags</Label>
               <div className="flex gap-2">
                 <Input
-                  className="h-10"
+                  className="h-9"
                   value={editTagInput}
                   onChange={(e) => setEditTagInput(e.target.value)}
                   placeholder="Add a tag and press Enter"
@@ -712,7 +700,7 @@ export const MenuManagement = () => {
                 <Label htmlFor="name" className="text-sm font-medium">Name *</Label>
                 <Input
                   id="name"
-                  className="h-10"
+                  className="h-9"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="e.g. Butter Chicken"
@@ -720,7 +708,7 @@ export const MenuManagement = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
-                <Select
+                <SearchableSelect
                   value={form.categoryId}
                   onValueChange={(value) => {
                     if (value === CREATE_CATEGORY_SENTINEL) {
@@ -729,29 +717,24 @@ export const MenuManagement = () => {
                     }
                     setForm({ ...form, categoryId: value });
                   }}
-                >
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                    <SelectSeparator />
-                    <SelectItem value={CREATE_CATEGORY_SENTINEL} className="text-primary font-medium">
-                      <Plus className="mr-1 h-4 w-4 inline" />
-                      Add Category
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                  options={categories.map((cat) => ({
+                    value: cat.id,
+                    label: cat.name,
+                  }))}
+                  placeholder="Select category"
+                  footerOptions={[
+                    {
+                      value: CREATE_CATEGORY_SENTINEL,
+                      label: '+ Add Category',
+                    },
+                  ]}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="price" className="text-sm font-medium">Price *</Label>
                 <Input
                   id="price"
-                  className="h-10"
+                  className="h-9"
                   type="number"
                   min="0"
                   step="0.01"
@@ -778,7 +761,7 @@ export const MenuManagement = () => {
                 <Label htmlFor="prepTime" className="text-sm font-medium">Prep Time (min)</Label>
                 <Input
                   id="prepTime"
-                  className="h-10"
+                  className="h-9"
                   type="number"
                   min="1"
                   value={form.preparationTime}
@@ -789,7 +772,7 @@ export const MenuManagement = () => {
                 <Label htmlFor="cuisine" className="text-sm font-medium">Cuisine</Label>
                 <Input
                   id="cuisine"
-                  className="h-10"
+                  className="h-9"
                   value={form.cuisine || ''}
                   onChange={(e) => setForm({ ...form, cuisine: e.target.value })}
                   placeholder="e.g. Indian"
@@ -820,7 +803,7 @@ export const MenuManagement = () => {
               <Label className="text-sm font-medium">Tags</Label>
               <div className="flex gap-2">
                 <Input
-                  className="h-10"
+                  className="h-9"
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   placeholder="Add a tag and press Enter"

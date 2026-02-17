@@ -1,6 +1,7 @@
 import { useSelector } from 'react-redux';
 import { useQuery } from '@tanstack/react-query';
 import type { RootState } from '@/store/store';
+import { useOrderSignalR } from '@/hooks/useOrderSignalR';
 import { orderApi } from '@/services/api/orderApi';
 import { reportApi } from '@/services/api/reportApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,6 +40,7 @@ const orderTypeData = [
 
 export const Dashboard = () => {
   const { user } = useSelector((state: RootState) => state.auth);
+  useOrderSignalR();
 
   const { data: dashboardStats, isLoading: statsLoading } = useQuery({
     queryKey: ['dashboardStats'],
