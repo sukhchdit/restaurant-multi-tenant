@@ -88,6 +88,79 @@ public class DiscountService : IDiscountService
         return ApiResponse<DiscountDto>.Ok(result, "Discount created successfully.");
     }
 
+    public async Task<ApiResponse<DiscountDto>> UpdateAsync(Guid id, UpdateDiscountDto dto, CancellationToken cancellationToken = default)
+    {
+        var restaurantId = _currentUser.RestaurantId;
+        if (restaurantId == null)
+            return ApiResponse<DiscountDto>.Fail("Restaurant context not found.", 403);
+
+        var discount = await _discountRepository.Query()
+            .FirstOrDefaultAsync(d => d.Id == id && d.RestaurantId == restaurantId.Value && !d.IsDeleted, cancellationToken);
+
+        if (discount == null)
+            return ApiResponse<DiscountDto>.Fail("Discount not found.", 404);
+
+        discount.Name = dto.Name;
+        discount.DiscountType = dto.DiscountType;
+        discount.Value = dto.Value;
+        discount.MinOrderAmount = dto.MinOrderAmount;
+        discount.MaxDiscountAmount = dto.MaxDiscountAmount;
+        discount.ApplicableOn = dto.ApplicableOn;
+        discount.CategoryId = dto.CategoryId;
+        discount.MenuItemId = dto.MenuItemId;
+        discount.StartDate = dto.StartDate;
+        discount.EndDate = dto.EndDate;
+        discount.AutoApply = dto.AutoApply;
+        discount.UpdatedBy = _currentUser.UserId;
+
+        _discountRepository.Update(discount);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var result = _mapper.Map<DiscountDto>(discount);
+        return ApiResponse<DiscountDto>.Ok(result, "Discount updated successfully.");
+    }
+
+    public async Task<ApiResponse> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var restaurantId = _currentUser.RestaurantId;
+        if (restaurantId == null)
+            return ApiResponse.Fail("Restaurant context not found.", 403);
+
+        var discount = await _discountRepository.Query()
+            .FirstOrDefaultAsync(d => d.Id == id && d.RestaurantId == restaurantId.Value && !d.IsDeleted, cancellationToken);
+
+        if (discount == null)
+            return ApiResponse.Fail("Discount not found.", 404);
+
+        discount.IsDeleted = true;
+        discount.UpdatedBy = _currentUser.UserId;
+        _discountRepository.Update(discount);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return ApiResponse.Ok("Discount deleted successfully.");
+    }
+
+    public async Task<ApiResponse<DiscountDto>> ToggleActiveAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var restaurantId = _currentUser.RestaurantId;
+        if (restaurantId == null)
+            return ApiResponse<DiscountDto>.Fail("Restaurant context not found.", 403);
+
+        var discount = await _discountRepository.Query()
+            .FirstOrDefaultAsync(d => d.Id == id && d.RestaurantId == restaurantId.Value && !d.IsDeleted, cancellationToken);
+
+        if (discount == null)
+            return ApiResponse<DiscountDto>.Fail("Discount not found.", 404);
+
+        discount.IsActive = !discount.IsActive;
+        discount.UpdatedBy = _currentUser.UserId;
+        _discountRepository.Update(discount);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var result = _mapper.Map<DiscountDto>(discount);
+        return ApiResponse<DiscountDto>.Ok(result, $"Discount {(discount.IsActive ? "activated" : "deactivated")}.");
+    }
+
     public async Task<ApiResponse<CouponDto>> ValidateCouponAsync(string couponCode, CancellationToken cancellationToken = default)
     {
         var restaurantId = _currentUser.RestaurantId;

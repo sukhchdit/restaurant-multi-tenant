@@ -124,8 +124,8 @@ export const StaffManagement = () => {
             <Skeleton key={i} className="h-20" />
           ))}
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
             <Skeleton key={i} className="h-56" />
           ))}
         </div>
@@ -182,7 +182,7 @@ export const StaffManagement = () => {
       </div>
 
       {/* Staff List */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {staff.map((member) => (
           <Card key={member.id} className="border border-primary/40 bg-primary/[0.03] transition-all hover:border-primary/60 hover:shadow-lg">
             <CardContent className="p-6">

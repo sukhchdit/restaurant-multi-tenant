@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using RestaurantManagement.API.Hubs;
 using RestaurantManagement.Application.DTOs.Staff;
 using RestaurantManagement.Application.Interfaces;
 using RestaurantManagement.Shared.Constants;
@@ -13,10 +15,19 @@ namespace RestaurantManagement.API.Controllers.V1;
 public class StaffController : ControllerBase
 {
     private readonly IStaffService _staffService;
+    private readonly IHubContext<OrderHub> _orderHub;
 
-    public StaffController(IStaffService staffService)
+    public StaffController(IStaffService staffService, IHubContext<OrderHub> orderHub)
     {
         _staffService = staffService;
+        _orderHub = orderHub;
+    }
+
+    private async Task BroadcastAsync(string eventName)
+    {
+        var tenantId = User.FindFirst("tenantId")?.Value;
+        if (!string.IsNullOrEmpty(tenantId))
+            await _orderHub.Clients.Group($"tenant_{tenantId}").SendAsync(eventName);
     }
 
     [HttpGet]
@@ -39,6 +50,7 @@ public class StaffController : ControllerBase
     public async Task<IActionResult> CreateStaff([FromBody] CreateStaffDto dto, CancellationToken cancellationToken)
     {
         var result = await _staffService.CreateStaffAsync(dto, cancellationToken);
+        if (result.Success) await BroadcastAsync("StaffUpdated");
         return StatusCode(result.StatusCode, result);
     }
 
@@ -49,6 +61,7 @@ public class StaffController : ControllerBase
     public async Task<IActionResult> UpdateStaff(Guid id, [FromBody] CreateStaffDto dto, CancellationToken cancellationToken)
     {
         var result = await _staffService.UpdateStaffAsync(id, dto, cancellationToken);
+        if (result.Success) await BroadcastAsync("StaffUpdated");
         return StatusCode(result.StatusCode, result);
     }
 
@@ -59,6 +72,7 @@ public class StaffController : ControllerBase
     public async Task<IActionResult> DeleteStaff(Guid id, CancellationToken cancellationToken)
     {
         var result = await _staffService.DeleteStaffAsync(id, cancellationToken);
+        if (result.Success) await BroadcastAsync("StaffUpdated");
         return StatusCode(result.StatusCode, result);
     }
 
@@ -82,6 +96,7 @@ public class StaffController : ControllerBase
     public async Task<IActionResult> CheckIn(Guid staffId, CancellationToken cancellationToken)
     {
         var result = await _staffService.CheckInAsync(staffId, cancellationToken);
+        if (result.Success) await BroadcastAsync("StaffUpdated");
         return StatusCode(result.StatusCode, result);
     }
 
@@ -92,6 +107,7 @@ public class StaffController : ControllerBase
     public async Task<IActionResult> CheckOut(Guid staffId, CancellationToken cancellationToken)
     {
         var result = await _staffService.CheckOutAsync(staffId, cancellationToken);
+        if (result.Success) await BroadcastAsync("StaffUpdated");
         return StatusCode(result.StatusCode, result);
     }
 }

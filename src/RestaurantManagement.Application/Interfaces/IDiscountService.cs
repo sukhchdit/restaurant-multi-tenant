@@ -7,6 +7,9 @@ public interface IDiscountService
 {
     Task<ApiResponse<List<DiscountDto>>> GetDiscountsAsync(bool? activeOnly = null, CancellationToken cancellationToken = default);
     Task<ApiResponse<DiscountDto>> CreateAsync(CreateDiscountDto dto, CancellationToken cancellationToken = default);
+    Task<ApiResponse<DiscountDto>> UpdateAsync(Guid id, UpdateDiscountDto dto, CancellationToken cancellationToken = default);
+    Task<ApiResponse> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<ApiResponse<DiscountDto>> ToggleActiveAsync(Guid id, CancellationToken cancellationToken = default);
     Task<ApiResponse<CouponDto>> ValidateCouponAsync(string couponCode, CancellationToken cancellationToken = default);
     Task<ApiResponse<ApplyDiscountResultDto>> ApplyDiscountAsync(ApplyDiscountDto dto, CancellationToken cancellationToken = default);
 }

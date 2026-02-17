@@ -42,7 +42,8 @@ public class KOTService : IKOTService
 
         var kots = await _kotRepository.Query()
             .Where(k => k.RestaurantId == restaurantId.Value && !k.IsDeleted
-                        && k.Status != KOTStatus.Ready)
+                        && (k.Status == KOTStatus.Sent || k.Status == KOTStatus.Acknowledged
+                            || k.Status == KOTStatus.Preparing || k.Status == KOTStatus.Ready))
             .Include(k => k.KOTItems)
             .Include(k => k.Order)
             .Include(k => k.AssignedChef)
@@ -132,9 +133,9 @@ public class KOTService : IKOTService
             item.UpdatedAt = DateTime.UtcNow;
         }
 
-        // Also update order status to Preparing
+        // Also update order status to Preparing (from Pending or Confirmed)
         var order = await _orderRepository.GetByIdAsync(kot.OrderId, cancellationToken);
-        if (order != null && order.Status == OrderStatus.Confirmed)
+        if (order != null && (order.Status == OrderStatus.Pending || order.Status == OrderStatus.Confirmed))
         {
             order.Status = OrderStatus.Preparing;
             order.UpdatedAt = DateTime.UtcNow;

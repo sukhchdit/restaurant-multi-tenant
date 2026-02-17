@@ -4,11 +4,13 @@ import type { HubConnection } from '@microsoft/signalr';
 
 type Handler = (...args: unknown[]) => void;
 
-export const useSignalR = (hubName: string) => {
+export const useSignalR = (hubName: string, enabled: boolean = true) => {
   const connectionRef = useRef<HubConnection | null>(null);
   const pendingRef = useRef<Map<string, Set<Handler>>>(new Map());
 
   useEffect(() => {
+    if (!enabled) return;
+
     const connect = async () => {
       try {
         const connection = await signalRService.connect(hubName);
@@ -31,7 +33,7 @@ export const useSignalR = (hubName: string) => {
       pendingRef.current.clear();
       signalRService.disconnect(hubName);
     };
-  }, [hubName]);
+  }, [hubName, enabled]);
 
   const on = useCallback((event: string, callback: Handler) => {
     const connection = connectionRef.current;

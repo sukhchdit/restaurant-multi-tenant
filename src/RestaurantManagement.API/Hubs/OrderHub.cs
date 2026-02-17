@@ -15,7 +15,7 @@ public class OrderHub : Hub
 
     public override async Task OnConnectedAsync()
     {
-        var tenantId = Context.User?.FindFirst("tenant_id")?.Value;
+        var tenantId = Context.User?.FindFirst("tenantId")?.Value;
         if (!string.IsNullOrEmpty(tenantId))
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, $"tenant_{tenantId}");
@@ -26,7 +26,7 @@ public class OrderHub : Hub
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        var tenantId = Context.User?.FindFirst("tenant_id")?.Value;
+        var tenantId = Context.User?.FindFirst("tenantId")?.Value;
         if (!string.IsNullOrEmpty(tenantId))
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"tenant_{tenantId}");

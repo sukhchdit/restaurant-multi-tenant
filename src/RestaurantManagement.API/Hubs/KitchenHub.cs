@@ -15,7 +15,7 @@ public class KitchenHub : Hub
 
     public override async Task OnConnectedAsync()
     {
-        var tenantId = Context.User?.FindFirst("tenant_id")?.Value;
+        var tenantId = Context.User?.FindFirst("tenantId")?.Value;
         if (!string.IsNullOrEmpty(tenantId))
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, $"kitchen_{tenantId}");
@@ -25,7 +25,7 @@ public class KitchenHub : Hub
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        var tenantId = Context.User?.FindFirst("tenant_id")?.Value;
+        var tenantId = Context.User?.FindFirst("tenantId")?.Value;
         if (!string.IsNullOrEmpty(tenantId))
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"kitchen_{tenantId}");
@@ -41,7 +41,7 @@ public class KitchenHub : Hub
 
     public async Task AcknowledgeKOT(string kotId)
     {
-        var tenantId = Context.User?.FindFirst("tenant_id")?.Value;
+        var tenantId = Context.User?.FindFirst("tenantId")?.Value;
         if (!string.IsNullOrEmpty(tenantId))
         {
             await Clients.Group($"kitchen_{tenantId}").SendAsync("KOTAcknowledged", kotId);

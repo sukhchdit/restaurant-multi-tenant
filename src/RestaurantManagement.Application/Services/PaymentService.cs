@@ -228,7 +228,7 @@ public class PaymentService : IPaymentService
     }
 
     public async Task<ApiResponse<PaginatedResultDto<PaymentDto>>> GetPaymentsAsync(
-        int pageNumber = 1, int pageSize = 20, Guid? orderId = null,
+        int pageNumber = 1, int pageSize = 20, Guid? orderId = null, string? search = null,
         CancellationToken cancellationToken = default)
     {
         var tenantId = _currentUser.TenantId;
@@ -236,15 +236,23 @@ public class PaymentService : IPaymentService
             return ApiResponse<PaginatedResultDto<PaymentDto>>.Fail("Tenant context not found.", 403);
 
         var query = _paymentRepository.QueryNoTracking()
+            .Include(p => p.Order)
             .Where(p => p.TenantId == tenantId.Value && !p.IsDeleted);
 
         if (orderId.HasValue)
             query = query.Where(p => p.OrderId == orderId.Value);
 
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = $"%{search}%";
+            query = query.Where(p =>
+                EF.Functions.Like(p.Order.OrderNumber, term) ||
+                (p.TransactionId != null && EF.Functions.Like(p.TransactionId, term)));
+        }
+
         var totalCount = await query.CountAsync(cancellationToken);
 
         var payments = await query
-            .Include(p => p.Order)
             .Include(p => p.PaymentSplits)
             .OrderByDescending(p => p.CreatedAt)
             .Skip((pageNumber - 1) * pageSize)

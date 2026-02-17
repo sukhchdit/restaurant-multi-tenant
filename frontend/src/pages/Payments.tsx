@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/table';
 import { CreditCard, DollarSign, Search, TrendingUp, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import type { ApiResponse } from '@/types/api.types';
+import type { ApiResponse, PaginatedResult } from '@/types/api.types';
 import type { Payment, PaymentMethod, ProcessPaymentRequest } from '@/types/payment.types';
 
 const statusColors: Record<string, string> = {
@@ -36,7 +36,7 @@ const statusColors: Record<string, string> = {
 };
 
 const paymentApi = {
-  getPayments: async (params?: { search?: string }): Promise<ApiResponse<Payment[]>> => {
+  getPayments: async (params?: { search?: string }): Promise<ApiResponse<PaginatedResult<Payment>>> => {
     const response = await axiosInstance.get('/payments', { params });
     return response.data;
   },
@@ -44,8 +44,8 @@ const paymentApi = {
     const response = await axiosInstance.post('/payments', data);
     return response.data;
   },
-  refundPayment: async (id: string, reason: string): Promise<ApiResponse<Payment>> => {
-    const response = await axiosInstance.post(`/payments/${id}/refund`, { reason });
+  refundPayment: async (id: string, amount: number, reason: string): Promise<ApiResponse<Payment>> => {
+    const response = await axiosInstance.post(`/payments/${id}/refund`, { amount, reason });
     return response.data;
   },
 };
@@ -78,8 +78,8 @@ export const Payments = () => {
   });
 
   const refundMutation = useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      paymentApi.refundPayment(id, reason),
+    mutationFn: ({ id, amount, reason }: { id: string; amount: number; reason: string }) =>
+      paymentApi.refundPayment(id, amount, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments'] });
       toast.success('Refund initiated');
@@ -89,7 +89,7 @@ export const Payments = () => {
     },
   });
 
-  const payments = paymentsResponse?.data ?? [];
+  const payments = paymentsResponse?.data?.items ?? [];
 
   const totalRevenue = payments
     .filter((p) => p.status === 'completed')
@@ -255,6 +255,7 @@ export const Payments = () => {
                         onClick={() =>
                           refundMutation.mutate({
                             id: payment.id,
+                            amount: payment.amount,
                             reason: 'Customer request',
                           })
                         }

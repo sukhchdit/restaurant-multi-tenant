@@ -31,7 +31,7 @@ import {
   User,
   Clock,
 } from 'lucide-react';
-import type { ApiResponse } from '@/types/api.types';
+import type { ApiResponse, PaginatedResult } from '@/types/api.types';
 
 interface AuditLog {
   id: string;
@@ -56,7 +56,7 @@ const auditApi = {
     dateFrom?: string;
     dateTo?: string;
     search?: string;
-  }): Promise<ApiResponse<AuditLog[]>> => {
+  }): Promise<ApiResponse<PaginatedResult<AuditLog>>> => {
     const response = await axiosInstance.get('/audit-logs', { params });
     return response.data;
   },
@@ -88,7 +88,7 @@ export const AuditLogs = () => {
       }),
   });
 
-  const logs = logsResponse?.data ?? [];
+  const logs = logsResponse?.data?.items ?? [];
 
   const entities = Array.from(new Set(logs.map((l) => l.entity)));
   const actions = Array.from(new Set(logs.map((l) => l.action)));

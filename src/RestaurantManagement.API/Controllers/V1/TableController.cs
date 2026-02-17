@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using RestaurantManagement.API.Hubs;
 using RestaurantManagement.Application.DTOs.Table;
 using RestaurantManagement.Application.Interfaces;
 using RestaurantManagement.Shared.Constants;
@@ -13,10 +15,19 @@ namespace RestaurantManagement.API.Controllers.V1;
 public class TableController : ControllerBase
 {
     private readonly ITableService _tableService;
+    private readonly IHubContext<OrderHub> _orderHub;
 
-    public TableController(ITableService tableService)
+    public TableController(ITableService tableService, IHubContext<OrderHub> orderHub)
     {
         _tableService = tableService;
+        _orderHub = orderHub;
+    }
+
+    private async Task BroadcastAsync(string eventName)
+    {
+        var tenantId = User.FindFirst("tenantId")?.Value;
+        if (!string.IsNullOrEmpty(tenantId))
+            await _orderHub.Clients.Group($"tenant_{tenantId}").SendAsync(eventName);
     }
 
     [HttpGet]
@@ -35,6 +46,7 @@ public class TableController : ControllerBase
     public async Task<IActionResult> CreateTable([FromBody] CreateTableDto dto, CancellationToken cancellationToken)
     {
         var result = await _tableService.CreateTableAsync(dto, cancellationToken);
+        if (result.Success) await BroadcastAsync("TableUpdated");
         return StatusCode(result.StatusCode, result);
     }
 
@@ -45,6 +57,7 @@ public class TableController : ControllerBase
     public async Task<IActionResult> UpdateTable(Guid id, [FromBody] CreateTableDto dto, CancellationToken cancellationToken)
     {
         var result = await _tableService.UpdateTableAsync(id, dto, cancellationToken);
+        if (result.Success) await BroadcastAsync("TableUpdated");
         return StatusCode(result.StatusCode, result);
     }
 
@@ -55,6 +68,7 @@ public class TableController : ControllerBase
     public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateTableStatusDto dto, CancellationToken cancellationToken)
     {
         var result = await _tableService.UpdateStatusAsync(id, dto, cancellationToken);
+        if (result.Success) await BroadcastAsync("TableUpdated");
         return StatusCode(result.StatusCode, result);
     }
 
@@ -65,6 +79,7 @@ public class TableController : ControllerBase
     public async Task<IActionResult> AssignTable(Guid id, Guid orderId, CancellationToken cancellationToken)
     {
         var result = await _tableService.AssignAsync(id, orderId, cancellationToken);
+        if (result.Success) await BroadcastAsync("TableUpdated");
         return StatusCode(result.StatusCode, result);
     }
 
@@ -75,6 +90,7 @@ public class TableController : ControllerBase
     public async Task<IActionResult> FreeTable(Guid id, CancellationToken cancellationToken)
     {
         var result = await _tableService.FreeAsync(id, cancellationToken);
+        if (result.Success) await BroadcastAsync("TableUpdated");
         return StatusCode(result.StatusCode, result);
     }
 

@@ -13,5 +13,6 @@ public interface ICustomerService
     Task<ApiResponse<CustomerDto>> UpdateAsync(Guid id, CreateCustomerDto dto, CancellationToken cancellationToken = default);
     Task<ApiResponse<List<OrderDto>>> GetOrderHistoryAsync(Guid customerId, CancellationToken cancellationToken = default);
     Task<ApiResponse<int>> GetLoyaltyPointsAsync(Guid customerId, CancellationToken cancellationToken = default);
+    Task<ApiResponse<List<FeedbackDto>>> GetAllFeedbackAsync(Guid? customerId = null, CancellationToken cancellationToken = default);
     Task<ApiResponse<FeedbackDto>> SubmitFeedbackAsync(Guid customerId, CreateFeedbackDto dto, CancellationToken cancellationToken = default);
 }

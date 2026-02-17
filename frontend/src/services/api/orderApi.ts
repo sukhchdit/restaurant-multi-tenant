@@ -8,8 +8,8 @@ export const orderApi = {
     status?: string;
     type?: string;
     search?: string;
-    dateFrom?: string;
-    dateTo?: string;
+    fromDate?: string;
+    toDate?: string;
     pageNumber?: number;
     pageSize?: number;
   }): Promise<PaginatedResponse<Order>> => {

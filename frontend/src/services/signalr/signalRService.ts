@@ -11,10 +11,9 @@ class SignalRService {
       return existingConnection;
     }
 
-    const token = localStorage.getItem('accessToken');
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(`${SIGNALR_URL}/${hubName}`, {
-        accessTokenFactory: () => token || '',
+        accessTokenFactory: () => localStorage.getItem('accessToken') || '',
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
       .configureLogging(signalR.LogLevel.Information)

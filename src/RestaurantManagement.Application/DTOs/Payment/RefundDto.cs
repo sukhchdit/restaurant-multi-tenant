@@ -9,6 +9,12 @@ public class RefundDto
     public string? Reason { get; set; }
 }
 
+public class RefundByIdDto
+{
+    public decimal Amount { get; set; }
+    public string? Reason { get; set; }
+}
+
 public class RefundResponseDto
 {
     public Guid Id { get; set; }
