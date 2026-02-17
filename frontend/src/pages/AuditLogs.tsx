@@ -6,13 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import {
   Table,
   TableBody,
@@ -197,34 +191,28 @@ export const AuditLogs = () => {
 
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
-          <Select value={actionFilter} onValueChange={setActionFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Filter by action" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Actions</SelectItem>
-              {actions.map((action) => (
-                <SelectItem key={action} value={action}>
-                  {action.replace('_', ' ')}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={actionFilter}
+            onValueChange={setActionFilter}
+            options={actions.map((action) => ({
+              value: action,
+              label: action.replace('_', ' '),
+            }))}
+            pinnedOptions={[{ value: 'all', label: 'All Actions' }]}
+            placeholder="Filter by action"
+          />
         </div>
 
-        <Select value={entityFilter} onValueChange={setEntityFilter}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Filter by entity" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Entities</SelectItem>
-            {entities.map((entity) => (
-              <SelectItem key={entity} value={entity}>
-                {entity}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          value={entityFilter}
+          onValueChange={setEntityFilter}
+          options={entities.map((entity) => ({
+            value: entity,
+            label: entity,
+          }))}
+          pinnedOptions={[{ value: 'all', label: 'All Entities' }]}
+          placeholder="Filter by entity"
+        />
       </div>
 
       {/* Logs Table */}

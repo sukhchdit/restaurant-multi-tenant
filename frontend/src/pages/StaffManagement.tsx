@@ -16,13 +16,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Plus, Mail, Phone, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -308,38 +302,32 @@ export const StaffManagement = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Role *</Label>
-                <Select
+                <SearchableSelect
                   value={staffForm.role}
                   onValueChange={(value) => setStaffForm({ ...staffForm, role: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="waiter">Waiter</SelectItem>
-                    <SelectItem value="chef">Chef</SelectItem>
-                    <SelectItem value="cashier">Cashier</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="kitchen">Kitchen Staff</SelectItem>
-                    <SelectItem value="delivery">Delivery</SelectItem>
-                  </SelectContent>
-                </Select>
+                  options={[
+                    { value: 'waiter', label: 'Waiter' },
+                    { value: 'chef', label: 'Chef' },
+                    { value: 'cashier', label: 'Cashier' },
+                    { value: 'manager', label: 'Manager' },
+                    { value: 'kitchen', label: 'Kitchen Staff' },
+                    { value: 'delivery', label: 'Delivery' },
+                  ]}
+                  placeholder="Select role"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Shift *</Label>
-                <Select
+                <SearchableSelect
                   value={staffForm.shift}
                   onValueChange={(value) => setStaffForm({ ...staffForm, shift: value as StaffShift })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="morning">Morning</SelectItem>
-                    <SelectItem value="evening">Evening</SelectItem>
-                    <SelectItem value="night">Night</SelectItem>
-                  </SelectContent>
-                </Select>
+                  options={[
+                    { value: 'morning', label: 'Morning' },
+                    { value: 'evening', label: 'Evening' },
+                    { value: 'night', label: 'Night' },
+                  ]}
+                  placeholder="Select shift"
+                />
               </div>
             </div>
 
@@ -430,38 +418,32 @@ export const StaffManagement = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Role *</Label>
-                <Select
+                <SearchableSelect
                   value={staffForm.role}
                   onValueChange={(value) => setStaffForm({ ...staffForm, role: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="waiter">Waiter</SelectItem>
-                    <SelectItem value="chef">Chef</SelectItem>
-                    <SelectItem value="cashier">Cashier</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="kitchen">Kitchen Staff</SelectItem>
-                    <SelectItem value="delivery">Delivery</SelectItem>
-                  </SelectContent>
-                </Select>
+                  options={[
+                    { value: 'waiter', label: 'Waiter' },
+                    { value: 'chef', label: 'Chef' },
+                    { value: 'cashier', label: 'Cashier' },
+                    { value: 'manager', label: 'Manager' },
+                    { value: 'kitchen', label: 'Kitchen Staff' },
+                    { value: 'delivery', label: 'Delivery' },
+                  ]}
+                  placeholder="Select role"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Shift *</Label>
-                <Select
+                <SearchableSelect
                   value={staffForm.shift}
                   onValueChange={(value) => setStaffForm({ ...staffForm, shift: value as StaffShift })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="morning">Morning</SelectItem>
-                    <SelectItem value="evening">Evening</SelectItem>
-                    <SelectItem value="night">Night</SelectItem>
-                  </SelectContent>
-                </Select>
+                  options={[
+                    { value: 'morning', label: 'Morning' },
+                    { value: 'evening', label: 'Evening' },
+                    { value: 'night', label: 'Night' },
+                  ]}
+                  placeholder="Select shift"
+                />
               </div>
             </div>
 

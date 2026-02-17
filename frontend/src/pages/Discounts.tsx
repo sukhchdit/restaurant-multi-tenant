@@ -15,13 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Plus, Edit, Trash2, Percent, Tag, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ApiResponse } from '@/types/api.types';
@@ -432,20 +426,17 @@ export const Discounts = () => {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Type</Label>
-                <Select
+                <SearchableSelect
                   value={formData.type}
                   onValueChange={(v) =>
                     setFormData({ ...formData, type: v as 'percentage' | 'fixed' })
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="percentage">Percentage</SelectItem>
-                    <SelectItem value="fixed">Fixed Amount</SelectItem>
-                  </SelectContent>
-                </Select>
+                  options={[
+                    { value: 'percentage', label: 'Percentage' },
+                    { value: 'fixed', label: 'Fixed Amount' },
+                  ]}
+                  placeholder="Select type"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Value</Label>
@@ -528,23 +519,20 @@ export const Discounts = () => {
               </div>
               <div className="space-y-2">
                 <Label>Applicable To</Label>
-                <Select
+                <SearchableSelect
                   value={formData.applicableTo}
                   onValueChange={(v) =>
                     setFormData({ ...formData, applicableTo: v })
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Orders</SelectItem>
-                    <SelectItem value="dine-in">Dine-In</SelectItem>
-                    <SelectItem value="takeaway">Takeaway</SelectItem>
-                    <SelectItem value="delivery">Delivery</SelectItem>
-                    <SelectItem value="online">Online</SelectItem>
-                  </SelectContent>
-                </Select>
+                  options={[
+                    { value: 'all', label: 'All Orders' },
+                    { value: 'dine-in', label: 'Dine-In' },
+                    { value: 'takeaway', label: 'Takeaway' },
+                    { value: 'delivery', label: 'Delivery' },
+                    { value: 'online', label: 'Online' },
+                  ]}
+                  placeholder="Select applicable to"
+                />
               </div>
             </div>
 
