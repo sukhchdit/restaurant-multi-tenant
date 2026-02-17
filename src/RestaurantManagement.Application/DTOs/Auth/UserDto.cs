@@ -11,4 +11,5 @@ public class UserDto
     public Guid TenantId { get; set; }
     public Guid? RestaurantId { get; set; }
     public string? RestaurantName { get; set; }
+    public DateTime? LastLoginAt { get; set; }
 }

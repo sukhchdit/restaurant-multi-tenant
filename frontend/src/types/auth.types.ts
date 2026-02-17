@@ -18,6 +18,7 @@ export interface User {
   tenantId: string;
   restaurantId?: string;
   restaurantName?: string;
+  lastLoginAt?: string;
 }
 
 export interface LoginRequest {

@@ -30,7 +30,7 @@ public class NotificationService : INotificationService
     }
 
     public async Task<ApiResponse<PaginatedResultDto<NotificationDto>>> GetNotificationsAsync(
-        int pageNumber = 1, int pageSize = 20, CancellationToken cancellationToken = default)
+        int pageNumber = 1, int pageSize = 20, bool? isRead = null, CancellationToken cancellationToken = default)
     {
         var userId = _currentUser.UserId;
         if (userId == null)
@@ -38,6 +38,9 @@ public class NotificationService : INotificationService
 
         var query = _notificationRepository.QueryNoTracking()
             .Where(n => n.UserId == userId.Value && !n.IsDeleted);
+
+        if (isRead.HasValue)
+            query = query.Where(n => n.IsRead == isRead.Value);
 
         var totalCount = await query.CountAsync(cancellationToken);
 
@@ -130,5 +133,23 @@ public class NotificationService : INotificationService
 
         var result = _mapper.Map<NotificationDto>(notification);
         return ApiResponse<NotificationDto>.Ok(result, "Notification created.");
+    }
+
+    public async Task<ApiResponse> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var notification = await _notificationRepository.GetByIdAsync(id, cancellationToken);
+        if (notification == null || notification.IsDeleted)
+            return ApiResponse.Fail("Notification not found.", 404);
+
+        if (notification.UserId != _currentUser.UserId)
+            return ApiResponse.Fail("Unauthorized.", 403);
+
+        notification.IsDeleted = true;
+        notification.UpdatedAt = DateTime.UtcNow;
+
+        _notificationRepository.Update(notification);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return ApiResponse.Ok("Notification deleted.");
     }
 }
