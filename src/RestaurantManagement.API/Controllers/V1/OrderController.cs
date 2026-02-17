@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using RestaurantManagement.API.Hubs;
 using RestaurantManagement.Application.DTOs.Order;
 using RestaurantManagement.Application.DTOs.Report;
 using RestaurantManagement.Application.Interfaces;
@@ -15,10 +17,20 @@ namespace RestaurantManagement.API.Controllers.V1;
 public class OrderController : ControllerBase
 {
     private readonly IOrderService _orderService;
+    private readonly ICurrentUserService _currentUser;
+    private readonly IHubContext<OrderHub> _orderHub;
+    private readonly IHubContext<KitchenHub> _kitchenHub;
 
-    public OrderController(IOrderService orderService)
+    public OrderController(
+        IOrderService orderService,
+        ICurrentUserService currentUser,
+        IHubContext<OrderHub> orderHub,
+        IHubContext<KitchenHub> kitchenHub)
     {
         _orderService = orderService;
+        _currentUser = currentUser;
+        _orderHub = orderHub;
+        _kitchenHub = kitchenHub;
     }
 
     [HttpGet]
@@ -55,6 +67,17 @@ public class OrderController : ControllerBase
     public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto dto, CancellationToken cancellationToken)
     {
         var result = await _orderService.CreateOrderAsync(dto, cancellationToken);
+        if (result.Success && result.Data != null)
+        {
+            var tenantId = _currentUser.TenantId;
+            if (tenantId != null)
+            {
+                await _orderHub.Clients.Group($"tenant_{tenantId}")
+                    .SendAsync("OrderCreated", new { orderId = result.Data.Id });
+                await _kitchenHub.Clients.Group($"kitchen_{tenantId}")
+                    .SendAsync("NewKOT", new { orderId = result.Data.Id });
+            }
+        }
         return StatusCode(result.StatusCode, result);
     }
 
@@ -66,6 +89,17 @@ public class OrderController : ControllerBase
     public async Task<IActionResult> UpdateOrder(Guid id, [FromBody] UpdateOrderDto dto, CancellationToken cancellationToken)
     {
         var result = await _orderService.UpdateOrderAsync(id, dto, cancellationToken);
+        if (result.Success && result.Data != null)
+        {
+            var tenantId = _currentUser.TenantId;
+            if (tenantId != null)
+            {
+                await _orderHub.Clients.Group($"tenant_{tenantId}")
+                    .SendAsync("OrderUpdated", new { orderId = result.Data.Id });
+                await _kitchenHub.Clients.Group($"kitchen_{tenantId}")
+                    .SendAsync("KOTUpdated", new { orderId = result.Data.Id });
+            }
+        }
         return StatusCode(result.StatusCode, result);
     }
 
@@ -76,6 +110,17 @@ public class OrderController : ControllerBase
     public async Task<IActionResult> UpdateOrderStatus(Guid id, [FromBody] UpdateOrderStatusDto dto, CancellationToken cancellationToken)
     {
         var result = await _orderService.UpdateOrderStatusAsync(id, dto, cancellationToken);
+        if (result.Success && result.Data != null)
+        {
+            var tenantId = _currentUser.TenantId;
+            if (tenantId != null)
+            {
+                await _orderHub.Clients.Group($"tenant_{tenantId}")
+                    .SendAsync("OrderStatusChanged", new { orderId = result.Data.Id, status = result.Data.Status });
+                await _kitchenHub.Clients.Group($"kitchen_{tenantId}")
+                    .SendAsync("KOTUpdated", new { orderId = result.Data.Id });
+            }
+        }
         return StatusCode(result.StatusCode, result);
     }
 
@@ -86,6 +131,17 @@ public class OrderController : ControllerBase
     public async Task<IActionResult> CancelOrder(Guid id, [FromQuery] string? reason, CancellationToken cancellationToken)
     {
         var result = await _orderService.CancelOrderAsync(id, reason, cancellationToken);
+        if (result.Success)
+        {
+            var tenantId = _currentUser.TenantId;
+            if (tenantId != null)
+            {
+                await _orderHub.Clients.Group($"tenant_{tenantId}")
+                    .SendAsync("OrderStatusChanged", new { orderId = id, status = "cancelled" });
+                await _kitchenHub.Clients.Group($"kitchen_{tenantId}")
+                    .SendAsync("KOTUpdated", new { orderId = id });
+            }
+        }
         return StatusCode(result.StatusCode, result);
     }
 
@@ -96,6 +152,17 @@ public class OrderController : ControllerBase
     public async Task<IActionResult> DeleteOrder(Guid id, [FromQuery] string? reason, CancellationToken cancellationToken)
     {
         var result = await _orderService.DeleteOrderAsync(id, reason, cancellationToken);
+        if (result.Success)
+        {
+            var tenantId = _currentUser.TenantId;
+            if (tenantId != null)
+            {
+                await _orderHub.Clients.Group($"tenant_{tenantId}")
+                    .SendAsync("OrderDeleted", new { orderId = id });
+                await _kitchenHub.Clients.Group($"kitchen_{tenantId}")
+                    .SendAsync("KOTUpdated", new { orderId = id });
+            }
+        }
         return StatusCode(result.StatusCode, result);
     }
 

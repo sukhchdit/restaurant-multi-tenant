@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using RestaurantManagement.API.Hubs;
 using RestaurantManagement.Application.DTOs.KOT;
 using RestaurantManagement.Application.Interfaces;
 using RestaurantManagement.Shared.Constants;
@@ -13,10 +15,20 @@ namespace RestaurantManagement.API.Controllers.V1;
 public class KOTController : ControllerBase
 {
     private readonly IKOTService _kotService;
+    private readonly ICurrentUserService _currentUser;
+    private readonly IHubContext<KitchenHub> _kitchenHub;
+    private readonly IHubContext<OrderHub> _orderHub;
 
-    public KOTController(IKOTService kotService)
+    public KOTController(
+        IKOTService kotService,
+        ICurrentUserService currentUser,
+        IHubContext<KitchenHub> kitchenHub,
+        IHubContext<OrderHub> orderHub)
     {
         _kotService = kotService;
+        _currentUser = currentUser;
+        _kitchenHub = kitchenHub;
+        _orderHub = orderHub;
     }
 
     [HttpGet]
@@ -35,6 +47,8 @@ public class KOTController : ControllerBase
     public async Task<IActionResult> Acknowledge(Guid id, CancellationToken cancellationToken)
     {
         var result = await _kotService.AcknowledgeAsync(id, cancellationToken);
+        if (result.Success)
+            await BroadcastKOTUpdate(result.Data!);
         return StatusCode(result.StatusCode, result);
     }
 
@@ -45,6 +59,8 @@ public class KOTController : ControllerBase
     public async Task<IActionResult> StartPreparing(Guid id, CancellationToken cancellationToken)
     {
         var result = await _kotService.StartPreparingAsync(id, cancellationToken);
+        if (result.Success)
+            await BroadcastKOTUpdate(result.Data!);
         return StatusCode(result.StatusCode, result);
     }
 
@@ -55,6 +71,23 @@ public class KOTController : ControllerBase
     public async Task<IActionResult> MarkReady(Guid id, CancellationToken cancellationToken)
     {
         var result = await _kotService.MarkReadyAsync(id, cancellationToken);
+        if (result.Success)
+            await BroadcastKOTUpdate(result.Data!);
         return StatusCode(result.StatusCode, result);
+    }
+
+    private async Task BroadcastKOTUpdate(KOTDto kot)
+    {
+        var tenantId = _currentUser.TenantId;
+        if (tenantId == null) return;
+
+        var kitchenGroup = $"kitchen_{tenantId}";
+        var orderGroup = $"tenant_{tenantId}";
+
+        await _kitchenHub.Clients.Group(kitchenGroup)
+            .SendAsync("KOTUpdated", new { kotId = kot.Id });
+
+        await _orderHub.Clients.Group(orderGroup)
+            .SendAsync("OrderStatusChanged", new { orderId = kot.OrderId, status = kot.Status });
     }
 }

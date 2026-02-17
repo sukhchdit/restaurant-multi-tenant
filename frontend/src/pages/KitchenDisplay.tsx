@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSignalR } from '@/hooks/useSignalR';
+import { useOrderSignalR } from '@/hooks/useOrderSignalR';
 import { orderApi } from '@/services/api/orderApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ export const KitchenDisplay = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const queryClient = useQueryClient();
   const { on } = useSignalR('kitchen');
+  useOrderSignalR();
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -39,17 +41,6 @@ export const KitchenDisplay = () => {
     queryKey: ['activeKOTs'],
     queryFn: () => orderApi.getActiveKOTs(),
     refetchInterval: 15000,
-  });
-
-  const acknowledgeMutation = useMutation({
-    mutationFn: (id: string) => orderApi.acknowledgeKOT(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['activeKOTs'] });
-      toast.success('Order acknowledged');
-    },
-    onError: () => {
-      toast.error('Failed to acknowledge order');
-    },
   });
 
   const startPreparingMutation = useMutation({
@@ -274,18 +265,7 @@ export const KitchenDisplay = () => {
 
                 {/* Actions */}
                 <div className="flex gap-2 border-t border-border pt-3">
-                  {kot.status === 'sent' && (
-                    <Button
-                      className="flex-1"
-                      onClick={() => acknowledgeMutation.mutate(kot.id)}
-                      variant="outline"
-                      disabled={acknowledgeMutation.isPending}
-                    >
-                      Acknowledge
-                    </Button>
-                  )}
-
-                  {(kot.status === 'acknowledged' || kot.status === 'sent') && (
+                  {(kot.status === 'sent' || kot.status === 'acknowledged') && (
                     <Button
                       className="flex-1"
                       onClick={() => startPreparingMutation.mutate(kot.id)}

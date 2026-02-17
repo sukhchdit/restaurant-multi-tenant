@@ -117,10 +117,11 @@ public class KOTService : IKOTService
         if (kot == null)
             return ApiResponse<KOTDto>.Fail("KOT not found.", 404);
 
-        if (kot.Status != KOTStatus.Acknowledged)
-            return ApiResponse<KOTDto>.Fail($"KOT cannot start preparing from status {kot.Status}. Expected: Acknowledged.");
+        if (kot.Status != KOTStatus.Sent && kot.Status != KOTStatus.Acknowledged)
+            return ApiResponse<KOTDto>.Fail($"KOT cannot start preparing from status {kot.Status}. Expected: Sent or Acknowledged.");
 
         kot.Status = KOTStatus.Preparing;
+        kot.AcknowledgedAt ??= DateTime.UtcNow;
         kot.StartedAt = DateTime.UtcNow;
         kot.UpdatedAt = DateTime.UtcNow;
         kot.UpdatedBy = _currentUser.UserId;

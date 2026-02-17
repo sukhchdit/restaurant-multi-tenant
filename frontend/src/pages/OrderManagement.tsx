@@ -31,6 +31,7 @@ import {
 import { cn } from '@/components/ui/utils';
 import { toast } from 'sonner';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useOrderSignalR } from '@/hooks/useOrderSignalR';
 import { KeyboardShortcutHint } from '@/components/keyboard/KeyboardShortcutHint';
 import { printBill } from '@/components/order/PrintBill';
 import type { Order, OrderStatus, OrderType, CreateOrderRequest, UpdateOrderRequest } from '@/types/order.types';
@@ -218,6 +219,7 @@ export const OrderManagement = () => {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  useOrderSignalR();
 
   // ── Queries ──
   const { data: ordersResponse, isLoading } = useQuery({
