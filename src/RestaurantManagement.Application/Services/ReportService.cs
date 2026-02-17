@@ -28,7 +28,7 @@ public class ReportService : IReportService
     }
 
     public async Task<ApiResponse<SalesReportDto>> GetSalesReportAsync(
-        DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default)
+        DateTime fromDate, DateTime toDate, string period = "weekly", CancellationToken cancellationToken = default)
     {
         var restaurantId = _currentUser.RestaurantId;
         if (restaurantId == null)
@@ -44,16 +44,49 @@ public class ReportService : IReportService
         var totalOrders = orders.Count;
         var averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-        // Group by month for period data
-        var periodData = orders
-            .GroupBy(o => new { o.CreatedAt.Year, o.CreatedAt.Month })
-            .Select(g => new RevenueChartDto
+        List<RevenueChartDto> periodData;
+
+        if (period == "monthly")
+        {
+            periodData = orders
+                .GroupBy(o => new { o.CreatedAt.Year, o.CreatedAt.Month })
+                .Select(g => new RevenueChartDto
+                {
+                    Label = new DateTime(g.Key.Year, g.Key.Month, 1).ToString("MMM yyyy"),
+                    Revenue = g.Sum(o => o.TotalAmount)
+                })
+                .OrderBy(p => p.Label)
+                .ToList();
+        }
+        else
+        {
+            // Daily grouping for daily/weekly periods
+            periodData = orders
+                .GroupBy(o => o.CreatedAt.Date)
+                .Select(g => new RevenueChartDto
+                {
+                    Label = g.Key.ToString("ddd, MMM dd"),
+                    Revenue = g.Sum(o => o.TotalAmount)
+                })
+                .OrderBy(p => p.Label)
+                .ToList();
+
+            // Fill in missing days with zero revenue
+            var filledData = new List<RevenueChartDto>();
+            var totalDays = (int)(toDate - fromDate).TotalDays;
+            for (int i = 0; i <= totalDays; i++)
             {
-                Month = $"{g.Key.Year}-{g.Key.Month:D2}",
-                Revenue = g.Sum(o => o.TotalAmount)
-            })
-            .OrderBy(p => p.Month)
-            .ToList();
+                var date = fromDate.AddDays(i).Date;
+                var label = date.ToString("ddd, MMM dd");
+                var existing = periodData.FirstOrDefault(p => p.Label == label);
+                filledData.Add(new RevenueChartDto
+                {
+                    Label = label,
+                    Revenue = existing?.Revenue ?? 0
+                });
+            }
+            periodData = filledData;
+        }
 
         var result = new SalesReportDto
         {
@@ -85,10 +118,10 @@ public class ReportService : IReportService
             .GroupBy(o => new { o.CreatedAt.Year, o.CreatedAt.Month })
             .Select(g => new RevenueChartDto
             {
-                Month = new DateTime(g.Key.Year, g.Key.Month, 1).ToString("MMM yyyy"),
+                Label = new DateTime(g.Key.Year, g.Key.Month, 1).ToString("MMM yyyy"),
                 Revenue = g.Sum(o => o.TotalAmount)
             })
-            .OrderBy(r => r.Month)
+            .OrderBy(r => r.Label)
             .ToList();
 
         // Fill in missing months with zero revenue
@@ -97,10 +130,10 @@ public class ReportService : IReportService
         {
             var date = DateTime.UtcNow.AddMonths(-i);
             var monthLabel = date.ToString("MMM yyyy");
-            var existing = trend.FirstOrDefault(t => t.Month == monthLabel);
+            var existing = trend.FirstOrDefault(t => t.Label == monthLabel);
             result.Add(new RevenueChartDto
             {
-                Month = monthLabel,
+                Label = monthLabel,
                 Revenue = existing?.Revenue ?? 0
             });
         }

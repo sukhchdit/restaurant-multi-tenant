@@ -246,6 +246,13 @@ export const TableManagement = () => {
   const occupiedTables = tables.filter((t) => t.status === 'occupied').length;
   const reservedTables = tables.filter((t) => t.status === 'reserved').length;
 
+  // Auto-select first table on initial load
+  useEffect(() => {
+    if (tables.length > 0 && !selectedTable) {
+      setSelectedTable(tables[0]);
+    }
+  }, [tables]);
+
   // ── Populate form from existing order ──
   const populateFormFromOrder = useCallback((order: Order) => {
     setOrderType(order.orderType);

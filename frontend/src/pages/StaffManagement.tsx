@@ -190,7 +190,7 @@ export const StaffManagement = () => {
       {/* Staff List */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {staff.map((member) => (
-          <Card key={member.id} className="border border-primary/20 bg-primary/[0.03] transition-all hover:border-primary/40 hover:shadow-lg">
+          <Card key={member.id} className="border border-primary/40 bg-primary/[0.03] transition-all hover:border-primary/60 hover:shadow-lg">
             <CardContent className="p-6">
               <div className="space-y-4">
                 <div className="flex items-start gap-4">

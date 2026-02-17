@@ -23,11 +23,21 @@ public class ReportController : ControllerBase
     [Authorize(Policy = Permissions.ReportView)]
     [ProducesResponseType(typeof(ApiResponse<SalesReportDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetSalesReport(
-        [FromQuery] DateTime fromDate,
-        [FromQuery] DateTime toDate,
-        CancellationToken cancellationToken)
+        [FromQuery] string? period = null,
+        [FromQuery] DateTime? fromDate = null,
+        [FromQuery] DateTime? toDate = null,
+        CancellationToken cancellationToken = default)
     {
-        var result = await _reportService.GetSalesReportAsync(fromDate, toDate, cancellationToken);
+        var to = toDate ?? DateTime.UtcNow;
+        var from = fromDate ?? period switch
+        {
+            "daily" => to.AddDays(-1),
+            "weekly" => to.AddDays(-7),
+            "monthly" => to.AddMonths(-1),
+            _ => to.AddDays(-7)
+        };
+
+        var result = await _reportService.GetSalesReportAsync(from, to, period ?? "weekly", cancellationToken);
         return StatusCode(result.StatusCode, result);
     }
 

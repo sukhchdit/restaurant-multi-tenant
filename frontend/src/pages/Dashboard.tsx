@@ -183,7 +183,7 @@ export const Dashboard = () => {
               recentOrders.slice(0, 5).map((order) => (
                 <div
                   key={order.id}
-                  className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/[0.03] p-4 transition-all hover:border-primary/40 hover:shadow-md"
+                  className="flex items-center justify-between rounded-lg border border-primary/40 bg-primary/[0.03] p-4 transition-all hover:border-primary/60 hover:shadow-md"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
@@ -228,7 +228,7 @@ export const Dashboard = () => {
               ))
             ) : (
               <>
-                <div className="flex items-center justify-between rounded-lg bg-amber-50 p-4 dark:bg-amber-950/20">
+                <div className="flex items-center justify-between rounded-lg border border-amber-600 bg-amber-50 p-4 dark:bg-amber-950/20">
                   <div className="flex items-center gap-3">
                     <Clock className="h-8 w-8 text-amber-600" />
                     <div>
@@ -241,7 +241,7 @@ export const Dashboard = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between rounded-lg bg-blue-50 p-4 dark:bg-blue-950/20">
+                <div className="flex items-center justify-between rounded-lg border border-blue-600 bg-blue-50 p-4 dark:bg-blue-950/20">
                   <div className="flex items-center gap-3">
                     <TrendingUp className="h-8 w-8 text-blue-600" />
                     <div>
@@ -254,7 +254,7 @@ export const Dashboard = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between rounded-lg bg-green-50 p-4 dark:bg-green-950/20">
+                <div className="flex items-center justify-between rounded-lg border border-green-600 bg-green-50 p-4 dark:bg-green-950/20">
                   <div className="flex items-center gap-3">
                     <CheckCircle className="h-8 w-8 text-green-600" />
                     <div>

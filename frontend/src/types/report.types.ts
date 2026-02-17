@@ -2,7 +2,7 @@ export interface SalesReport {
   totalRevenue: number;
   totalOrders: number;
   averageOrderValue: number;
-  periodData: { label: string; revenue: number; orders: number }[];
+  periodData: { label: string; revenue: number }[];
 }
 
 export interface CategoryDistribution {
@@ -21,7 +21,7 @@ export interface TopMenuItem {
 }
 
 export interface RevenueChart {
-  month: string;
+  label: string;
   revenue: number;
 }
 

@@ -545,7 +545,7 @@ export const OrderManagement = () => {
 
   // ── Order Card component ──
   const OrderCard = ({ order }: { order: Order }) => (
-    <Card className="flex flex-col overflow-hidden border border-primary/20 bg-primary/[0.03] transition-all hover:border-primary/40 hover:shadow-lg">
+    <Card className="flex flex-col overflow-hidden border border-primary/40 bg-primary/[0.03] transition-all hover:border-primary/60 hover:shadow-lg">
       {/* Card body */}
       <CardContent className="flex-1 p-5 pb-4">
         {/* Header */}
@@ -663,10 +663,17 @@ export const OrderManagement = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <TabsList>
-              <TabsTrigger value="orders">Orders List</TabsTrigger>
-            </TabsList>
-            <Button onClick={() => setMainTab('new-order')}>
+            <Button
+              variant={mainTab === 'orders' ? 'default' : 'outline'}
+              onClick={() => setMainTab('orders')}
+            >
+              <ClipboardList className="mr-2 h-4 w-4" />
+              Orders List
+            </Button>
+            <Button
+              variant={mainTab === 'new-order' ? 'default' : 'outline'}
+              onClick={() => setMainTab('new-order')}
+            >
               <Plus className="mr-2 h-4 w-4" />
               New Order
               <KeyboardShortcutHint shortcut="N" />

@@ -142,7 +142,7 @@ export const Inventory = () => {
             new Date(item.expiryDate).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000;
 
           return (
-            <Card key={item.id} className="border border-primary/20 bg-primary/[0.03] transition-all hover:border-primary/40 hover:shadow-lg">
+            <Card key={item.id} className="border border-primary/40 bg-primary/[0.03] transition-all hover:border-primary/60 hover:shadow-lg">
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-start justify-between">

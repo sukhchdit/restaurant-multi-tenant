@@ -210,7 +210,7 @@ export const MenuManagement = () => {
   }[gridCols];
 
   const MenuItemCard = ({ item }: { item: MenuItem }) => (
-    <Card className="gap-0 border border-primary/20 bg-primary/[0.03] transition-all hover:border-primary/40 hover:shadow-lg">
+    <Card className="gap-0 border border-primary/40 bg-primary/[0.03] transition-all hover:border-primary/60 hover:shadow-lg">
       <CardContent className="flex p-0 [&:last-child]:pb-0">
         {/* Left: Image / Icon — 20% */}
         <div className="flex w-[20%] shrink-0 items-center justify-center rounded-l-xl bg-primary/10">
