@@ -520,7 +520,7 @@ export const MenuManagement = () => {
                 <Label htmlFor="editName" className="text-sm font-medium">Name *</Label>
                 <Input
                   id="editName"
-                  className="h-10"
+                  className="h-9"
                   value={editForm.name || ''}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                 />
@@ -553,7 +553,7 @@ export const MenuManagement = () => {
                 <Label htmlFor="editPrice" className="text-sm font-medium">Price *</Label>
                 <Input
                   id="editPrice"
-                  className="h-10"
+                  className="h-9"
                   type="number"
                   min="0"
                   step="0.01"
@@ -578,7 +578,7 @@ export const MenuManagement = () => {
                 <Label htmlFor="editPrepTime" className="text-sm font-medium">Prep Time (min)</Label>
                 <Input
                   id="editPrepTime"
-                  className="h-10"
+                  className="h-9"
                   type="number"
                   min="1"
                   value={editForm.preparationTime || ''}
@@ -589,7 +589,7 @@ export const MenuManagement = () => {
                 <Label htmlFor="editCuisine" className="text-sm font-medium">Cuisine</Label>
                 <Input
                   id="editCuisine"
-                  className="h-10"
+                  className="h-9"
                   value={editForm.cuisine || ''}
                   onChange={(e) => setEditForm({ ...editForm, cuisine: e.target.value })}
                 />
@@ -627,7 +627,7 @@ export const MenuManagement = () => {
               <Label className="text-sm font-medium">Tags</Label>
               <div className="flex gap-2">
                 <Input
-                  className="h-10"
+                  className="h-9"
                   value={editTagInput}
                   onChange={(e) => setEditTagInput(e.target.value)}
                   placeholder="Add a tag and press Enter"
@@ -700,7 +700,7 @@ export const MenuManagement = () => {
                 <Label htmlFor="name" className="text-sm font-medium">Name *</Label>
                 <Input
                   id="name"
-                  className="h-10"
+                  className="h-9"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="e.g. Butter Chicken"
@@ -734,7 +734,7 @@ export const MenuManagement = () => {
                 <Label htmlFor="price" className="text-sm font-medium">Price *</Label>
                 <Input
                   id="price"
-                  className="h-10"
+                  className="h-9"
                   type="number"
                   min="0"
                   step="0.01"
@@ -761,7 +761,7 @@ export const MenuManagement = () => {
                 <Label htmlFor="prepTime" className="text-sm font-medium">Prep Time (min)</Label>
                 <Input
                   id="prepTime"
-                  className="h-10"
+                  className="h-9"
                   type="number"
                   min="1"
                   value={form.preparationTime}
@@ -772,7 +772,7 @@ export const MenuManagement = () => {
                 <Label htmlFor="cuisine" className="text-sm font-medium">Cuisine</Label>
                 <Input
                   id="cuisine"
-                  className="h-10"
+                  className="h-9"
                   value={form.cuisine || ''}
                   onChange={(e) => setForm({ ...form, cuisine: e.target.value })}
                   placeholder="e.g. Indian"
@@ -803,7 +803,7 @@ export const MenuManagement = () => {
               <Label className="text-sm font-medium">Tags</Label>
               <div className="flex gap-2">
                 <Input
-                  className="h-10"
+                  className="h-9"
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   placeholder="Add a tag and press Enter"
