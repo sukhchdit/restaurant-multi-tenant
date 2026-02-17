@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using RestaurantManagement.API.Hubs;
 using RestaurantManagement.Application.DTOs.Menu;
 using RestaurantManagement.Application.Interfaces;
 using RestaurantManagement.Shared.Constants;
@@ -13,10 +15,19 @@ namespace RestaurantManagement.API.Controllers.V1;
 public class MenuController : ControllerBase
 {
     private readonly IMenuService _menuService;
+    private readonly IHubContext<OrderHub> _orderHub;
 
-    public MenuController(IMenuService menuService)
+    public MenuController(IMenuService menuService, IHubContext<OrderHub> orderHub)
     {
         _menuService = menuService;
+        _orderHub = orderHub;
+    }
+
+    private async Task BroadcastAsync(string eventName)
+    {
+        var tenantId = User.FindFirst("tenantId")?.Value;
+        if (!string.IsNullOrEmpty(tenantId))
+            await _orderHub.Clients.Group($"tenant_{tenantId}").SendAsync(eventName);
     }
 
     [HttpGet("categories")]
@@ -35,6 +46,7 @@ public class MenuController : ControllerBase
     public async Task<IActionResult> CreateCategory([FromBody] CategoryDto dto, CancellationToken cancellationToken)
     {
         var result = await _menuService.CreateCategoryAsync(dto, cancellationToken);
+        if (result.Success) await BroadcastAsync("MenuUpdated");
         return StatusCode(result.StatusCode, result);
     }
 
@@ -45,6 +57,7 @@ public class MenuController : ControllerBase
     public async Task<IActionResult> UpdateCategory(Guid id, [FromBody] CategoryDto dto, CancellationToken cancellationToken)
     {
         var result = await _menuService.UpdateCategoryAsync(id, dto, cancellationToken);
+        if (result.Success) await BroadcastAsync("MenuUpdated");
         return StatusCode(result.StatusCode, result);
     }
 
@@ -56,6 +69,7 @@ public class MenuController : ControllerBase
     public async Task<IActionResult> DeleteCategory(Guid id, CancellationToken cancellationToken)
     {
         var result = await _menuService.DeleteCategoryAsync(id, cancellationToken);
+        if (result.Success) await BroadcastAsync("MenuUpdated");
         return StatusCode(result.StatusCode, result);
     }
 
@@ -92,6 +106,7 @@ public class MenuController : ControllerBase
     public async Task<IActionResult> CreateItem([FromBody] CreateMenuItemDto dto, CancellationToken cancellationToken)
     {
         var result = await _menuService.CreateItemAsync(dto, cancellationToken);
+        if (result.Success) await BroadcastAsync("MenuUpdated");
         return StatusCode(result.StatusCode, result);
     }
 
@@ -102,6 +117,7 @@ public class MenuController : ControllerBase
     public async Task<IActionResult> UpdateItem(Guid id, [FromBody] UpdateMenuItemDto dto, CancellationToken cancellationToken)
     {
         var result = await _menuService.UpdateItemAsync(id, dto, cancellationToken);
+        if (result.Success) await BroadcastAsync("MenuUpdated");
         return StatusCode(result.StatusCode, result);
     }
 
@@ -112,6 +128,7 @@ public class MenuController : ControllerBase
     public async Task<IActionResult> DeleteItem(Guid id, CancellationToken cancellationToken)
     {
         var result = await _menuService.DeleteItemAsync(id, cancellationToken);
+        if (result.Success) await BroadcastAsync("MenuUpdated");
         return StatusCode(result.StatusCode, result);
     }
 
@@ -122,6 +139,7 @@ public class MenuController : ControllerBase
     public async Task<IActionResult> ToggleAvailability(Guid id, CancellationToken cancellationToken)
     {
         var result = await _menuService.ToggleAvailabilityAsync(id, cancellationToken);
+        if (result.Success) await BroadcastAsync("MenuUpdated");
         return StatusCode(result.StatusCode, result);
     }
 

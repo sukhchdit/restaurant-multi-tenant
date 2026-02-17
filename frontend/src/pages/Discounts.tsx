@@ -23,17 +23,18 @@ import type { ApiResponse } from '@/types/api.types';
 interface Discount {
   id: string;
   name: string;
-  code: string;
-  type: 'percentage' | 'fixed';
+  discountType: 'percentage' | 'flat';
   value: number;
   minOrderAmount?: number;
-  maxDiscount?: number;
-  startDate: string;
-  endDate: string;
-  usageLimit?: number;
-  usedCount: number;
+  maxDiscountAmount?: number;
+  applicableOn?: string;
+  categoryId?: string;
+  menuItemId?: string;
+  startDate?: string;
+  endDate?: string;
   isActive: boolean;
-  applicableTo: 'all' | 'dine-in' | 'takeaway' | 'delivery' | 'online';
+  autoApply: boolean;
+  createdAt: string;
 }
 
 const discountApi = {
@@ -64,15 +65,13 @@ export const Discounts = () => {
   const [editingDiscount, setEditingDiscount] = useState<Discount | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    code: '',
-    type: 'percentage' as 'percentage' | 'fixed',
+    discountType: 'percentage' as 'percentage' | 'flat',
     value: '',
     minOrderAmount: '',
-    maxDiscount: '',
+    maxDiscountAmount: '',
     startDate: '',
     endDate: '',
-    usageLimit: '',
-    applicableTo: 'all' as string,
+    applicableOn: 'all' as string,
   });
   const queryClient = useQueryClient();
 
@@ -126,15 +125,13 @@ export const Discounts = () => {
     setEditingDiscount(null);
     setFormData({
       name: '',
-      code: '',
-      type: 'percentage',
+      discountType: 'percentage',
       value: '',
       minOrderAmount: '',
-      maxDiscount: '',
+      maxDiscountAmount: '',
       startDate: '',
       endDate: '',
-      usageLimit: '',
-      applicableTo: 'all',
+      applicableOn: 'all',
     });
     setDialogOpen(true);
   };
@@ -143,15 +140,13 @@ export const Discounts = () => {
     setEditingDiscount(discount);
     setFormData({
       name: discount.name,
-      code: discount.code,
-      type: discount.type,
+      discountType: discount.discountType,
       value: String(discount.value),
       minOrderAmount: discount.minOrderAmount ? String(discount.minOrderAmount) : '',
-      maxDiscount: discount.maxDiscount ? String(discount.maxDiscount) : '',
-      startDate: discount.startDate.split('T')[0],
-      endDate: discount.endDate.split('T')[0],
-      usageLimit: discount.usageLimit ? String(discount.usageLimit) : '',
-      applicableTo: discount.applicableTo,
+      maxDiscountAmount: discount.maxDiscountAmount ? String(discount.maxDiscountAmount) : '',
+      startDate: discount.startDate ? discount.startDate.split('T')[0] : '',
+      endDate: discount.endDate ? discount.endDate.split('T')[0] : '',
+      applicableOn: discount.applicableOn || 'all',
     });
     setDialogOpen(true);
   };
@@ -165,15 +160,13 @@ export const Discounts = () => {
     e.preventDefault();
     const payload: Partial<Discount> = {
       name: formData.name,
-      code: formData.code,
-      type: formData.type,
+      discountType: formData.discountType,
       value: parseFloat(formData.value),
       minOrderAmount: formData.minOrderAmount ? parseFloat(formData.minOrderAmount) : undefined,
-      maxDiscount: formData.maxDiscount ? parseFloat(formData.maxDiscount) : undefined,
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      usageLimit: formData.usageLimit ? parseInt(formData.usageLimit) : undefined,
-      applicableTo: formData.applicableTo as Discount['applicableTo'],
+      maxDiscountAmount: formData.maxDiscountAmount ? parseFloat(formData.maxDiscountAmount) : undefined,
+      startDate: formData.startDate || undefined,
+      endDate: formData.endDate || undefined,
+      applicableOn: formData.applicableOn,
     };
 
     if (editingDiscount) {
@@ -260,9 +253,9 @@ export const Discounts = () => {
                 <Calendar className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Usages</p>
+                <p className="text-sm text-muted-foreground">Expired</p>
                 <p className="text-2xl font-bold">
-                  {discounts.reduce((sum, d) => sum + d.usedCount, 0)}
+                  {discounts.filter((d) => d.endDate && new Date(d.endDate) < new Date()).length}
                 </p>
               </div>
             </div>
@@ -273,7 +266,7 @@ export const Discounts = () => {
       {/* Discounts Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {discounts.map((discount) => {
-          const isExpired = new Date(discount.endDate) < new Date();
+          const isExpired = discount.endDate ? new Date(discount.endDate) < new Date() : false;
           return (
             <Card key={discount.id} className="transition-all hover:shadow-lg">
               <CardContent className="p-6">
@@ -281,8 +274,8 @@ export const Discounts = () => {
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className="font-semibold">{discount.name}</h3>
-                      <p className="font-mono text-sm text-muted-foreground">
-                        {discount.code}
+                      <p className="text-sm text-muted-foreground capitalize">
+                        {discount.discountType}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -295,48 +288,45 @@ export const Discounts = () => {
 
                   <div className="text-center rounded-lg bg-muted p-4">
                     <p className="text-3xl font-bold text-primary">
-                      {discount.type === 'percentage'
+                      {discount.discountType === 'percentage'
                         ? `${discount.value}%`
                         : `$${discount.value.toFixed(2)}`}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {discount.type === 'percentage' ? 'Off' : 'Fixed Discount'}
+                      {discount.discountType === 'percentage' ? 'Off' : 'Flat Discount'}
                     </p>
                   </div>
 
                   <div className="space-y-2 text-sm">
-                    {discount.minOrderAmount && (
+                    {discount.minOrderAmount != null && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Min Order</span>
                         <span>${discount.minOrderAmount.toFixed(2)}</span>
                       </div>
                     )}
-                    {discount.maxDiscount && (
+                    {discount.maxDiscountAmount != null && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Max Discount</span>
-                        <span>${discount.maxDiscount.toFixed(2)}</span>
+                        <span>${discount.maxDiscountAmount.toFixed(2)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Used</span>
-                      <span>
-                        {discount.usedCount}
-                        {discount.usageLimit ? ` / ${discount.usageLimit}` : ''}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Applies To</span>
-                      <Badge variant="outline" className="capitalize">
-                        {discount.applicableTo}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Valid</span>
-                      <span className="text-xs">
-                        {new Date(discount.startDate).toLocaleDateString()} -{' '}
-                        {new Date(discount.endDate).toLocaleDateString()}
-                      </span>
-                    </div>
+                    {discount.applicableOn && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Applies To</span>
+                        <Badge variant="outline" className="capitalize">
+                          {discount.applicableOn}
+                        </Badge>
+                      </div>
+                    )}
+                    {(discount.startDate || discount.endDate) && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Valid</span>
+                        <span className="text-xs">
+                          {discount.startDate ? new Date(discount.startDate).toLocaleDateString() : '—'} –{' '}
+                          {discount.endDate ? new Date(discount.endDate).toLocaleDateString() : '—'}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between border-t border-border pt-4">
@@ -398,42 +388,29 @@ export const Discounts = () => {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Name</Label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="Summer Sale"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Code</Label>
-                <Input
-                  value={formData.code}
-                  onChange={(e) =>
-                    setFormData({ ...formData, code: e.target.value.toUpperCase() })
-                  }
-                  placeholder="SUMMER20"
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                placeholder="Summer Sale"
+                required
+              />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Type</Label>
                 <SearchableSelect
-                  value={formData.type}
+                  value={formData.discountType}
                   onValueChange={(v) =>
-                    setFormData({ ...formData, type: v as 'percentage' | 'fixed' })
+                    setFormData({ ...formData, discountType: v as 'percentage' | 'flat' })
                   }
                   options={[
                     { value: 'percentage', label: 'Percentage' },
-                    { value: 'fixed', label: 'Fixed Amount' },
+                    { value: 'flat', label: 'Flat Amount' },
                   ]}
                   placeholder="Select type"
                 />
@@ -447,7 +424,7 @@ export const Discounts = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, value: e.target.value })
                   }
-                  placeholder={formData.type === 'percentage' ? '20' : '5.00'}
+                  placeholder={formData.discountType === 'percentage' ? '20' : '5.00'}
                   required
                 />
               </div>
@@ -471,9 +448,9 @@ export const Discounts = () => {
                 <Input
                   type="number"
                   step="0.01"
-                  value={formData.maxDiscount}
+                  value={formData.maxDiscountAmount}
                   onChange={(e) =>
-                    setFormData({ ...formData, maxDiscount: e.target.value })
+                    setFormData({ ...formData, maxDiscountAmount: e.target.value })
                   }
                   placeholder="Optional"
                 />
@@ -489,7 +466,6 @@ export const Discounts = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, startDate: e.target.value })
                   }
-                  required
                 />
               </div>
               <div className="space-y-2">
@@ -500,40 +476,26 @@ export const Discounts = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, endDate: e.target.value })
                   }
-                  required
                 />
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Usage Limit</Label>
-                <Input
-                  type="number"
-                  value={formData.usageLimit}
-                  onChange={(e) =>
-                    setFormData({ ...formData, usageLimit: e.target.value })
-                  }
-                  placeholder="Unlimited"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Applicable To</Label>
-                <SearchableSelect
-                  value={formData.applicableTo}
-                  onValueChange={(v) =>
-                    setFormData({ ...formData, applicableTo: v })
-                  }
-                  options={[
-                    { value: 'all', label: 'All Orders' },
-                    { value: 'dine-in', label: 'Dine-In' },
-                    { value: 'takeaway', label: 'Takeaway' },
-                    { value: 'delivery', label: 'Delivery' },
-                    { value: 'online', label: 'Online' },
-                  ]}
-                  placeholder="Select applicable to"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Applicable To</Label>
+              <SearchableSelect
+                value={formData.applicableOn}
+                onValueChange={(v) =>
+                  setFormData({ ...formData, applicableOn: v })
+                }
+                options={[
+                  { value: 'all', label: 'All Orders' },
+                  { value: 'dine-in', label: 'Dine-In' },
+                  { value: 'takeaway', label: 'Takeaway' },
+                  { value: 'delivery', label: 'Delivery' },
+                  { value: 'online', label: 'Online' },
+                ]}
+                placeholder="Select applicable to"
+              />
             </div>
 
             <div className="flex gap-2 justify-end">

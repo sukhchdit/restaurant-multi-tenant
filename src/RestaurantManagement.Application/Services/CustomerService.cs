@@ -149,6 +149,28 @@ public class CustomerService : ICustomerService
         return ApiResponse<int>.Ok(customer.LoyaltyPoints);
     }
 
+    public async Task<ApiResponse<List<FeedbackDto>>> GetAllFeedbackAsync(Guid? customerId = null, CancellationToken cancellationToken = default)
+    {
+        var restaurantId = _currentUser.RestaurantId;
+        if (restaurantId == null)
+            return ApiResponse<List<FeedbackDto>>.Fail("Restaurant context not found.", 403);
+
+        var query = _feedbackRepository.QueryNoTracking()
+            .Include(f => f.Customer)
+            .Include(f => f.Order)
+            .Where(f => f.RestaurantId == restaurantId.Value && !f.IsDeleted);
+
+        if (customerId.HasValue)
+            query = query.Where(f => f.CustomerId == customerId.Value);
+
+        var feedback = await query
+            .OrderByDescending(f => f.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        var result = _mapper.Map<List<FeedbackDto>>(feedback);
+        return ApiResponse<List<FeedbackDto>>.Ok(result);
+    }
+
     public async Task<ApiResponse<FeedbackDto>> SubmitFeedbackAsync(Guid customerId, CreateFeedbackDto dto, CancellationToken cancellationToken = default)
     {
         var customer = await _customerRepository.GetByIdAsync(customerId, cancellationToken);

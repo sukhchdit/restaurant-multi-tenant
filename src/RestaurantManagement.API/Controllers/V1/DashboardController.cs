@@ -41,19 +41,19 @@ public class DashboardController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<List<RevenueChartDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRevenueTrend([FromQuery] int months = 6, CancellationToken cancellationToken = default)
     {
-        var result = await _reportService.GetRevenueTrendAsync(months, cancellationToken);
+        var result = await _reportService.GetRevenueTrendAsync(months, cancellationToken: cancellationToken);
         return StatusCode(result.StatusCode, result);
     }
 
     [HttpGet("category-distribution")]
     [Authorize(Policy = Permissions.ReportView)]
     [ProducesResponseType(typeof(ApiResponse<List<CategoryDistributionDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetCategoryDistribution(
-        [FromQuery] DateTime? fromDate = null,
-        [FromQuery] DateTime? toDate = null,
-        CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetCategoryDistribution(CancellationToken cancellationToken = default)
     {
-        var result = await _reportService.GetCategoryDistributionAsync(fromDate, toDate, cancellationToken);
+        var today = DateTime.UtcNow.Date;
+        var from = today.AddMonths(-1);
+        var to = today.Add(new TimeSpan(23, 59, 59));
+        var result = await _reportService.GetCategoryDistributionAsync(from, to, cancellationToken);
         return StatusCode(result.StatusCode, result);
     }
 
@@ -62,11 +62,12 @@ public class DashboardController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<List<TopMenuItemDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTopMenuItems(
         [FromQuery] int count = 10,
-        [FromQuery] DateTime? fromDate = null,
-        [FromQuery] DateTime? toDate = null,
         CancellationToken cancellationToken = default)
     {
-        var result = await _reportService.GetTopItemsAsync(count, fromDate, toDate, cancellationToken);
+        var today = DateTime.UtcNow.Date;
+        var from = today.AddMonths(-1);
+        var to = today.Add(new TimeSpan(23, 59, 59));
+        var result = await _reportService.GetTopItemsAsync(count, from, to, cancellationToken);
         return StatusCode(result.StatusCode, result);
     }
 

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSignalR } from '@/hooks/useSignalR';
-import { useOrderSignalR } from '@/hooks/useOrderSignalR';
 import { orderApi } from '@/services/api/orderApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,13 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Clock, ChefHat, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import type { KitchenOrderTicket } from '@/types/order.types';
+import type { ApiResponse } from '@/types/api.types';
 
 export const KitchenDisplay = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const queryClient = useQueryClient();
   const { on } = useSignalR('kitchen');
-  useOrderSignalR();
-
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -45,22 +44,42 @@ export const KitchenDisplay = () => {
 
   const startPreparingMutation = useMutation({
     mutationFn: (id: string) => orderApi.startPreparingKOT(id),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['activeKOTs'] });
+      const previous = queryClient.getQueryData(['activeKOTs']);
+      queryClient.setQueryData(['activeKOTs'], (old: ApiResponse<KitchenOrderTicket[]> | undefined) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.map((k) => k.id === id ? { ...k, status: 'preparing' as const } : k) };
+      });
+      return { previous };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activeKOTs'] });
       toast.success('Started preparing');
     },
-    onError: () => {
+    onError: (_err, _id, context) => {
+      if (context?.previous) queryClient.setQueryData(['activeKOTs'], context.previous);
       toast.error('Failed to update status');
     },
   });
 
   const markReadyMutation = useMutation({
     mutationFn: (id: string) => orderApi.markKOTReady(id),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['activeKOTs'] });
+      const previous = queryClient.getQueryData(['activeKOTs']);
+      queryClient.setQueryData(['activeKOTs'], (old: ApiResponse<KitchenOrderTicket[]> | undefined) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.map((k) => k.id === id ? { ...k, status: 'ready' as const } : k) };
+      });
+      return { previous };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activeKOTs'] });
       toast.success('Order ready for serving');
     },
-    onError: () => {
+    onError: (_err, _id, context) => {
+      if (context?.previous) queryClient.setQueryData(['activeKOTs'], context.previous);
       toast.error('Failed to mark as ready');
     },
   });

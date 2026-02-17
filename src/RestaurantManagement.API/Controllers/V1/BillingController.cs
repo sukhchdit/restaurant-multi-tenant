@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using RestaurantManagement.API.Hubs;
 using RestaurantManagement.Application.DTOs.Billing;
 using RestaurantManagement.Application.Interfaces;
 using RestaurantManagement.Shared.Constants;
@@ -13,10 +15,19 @@ namespace RestaurantManagement.API.Controllers.V1;
 public class BillingController : ControllerBase
 {
     private readonly IBillingService _billingService;
+    private readonly IHubContext<OrderHub> _orderHub;
 
-    public BillingController(IBillingService billingService)
+    public BillingController(IBillingService billingService, IHubContext<OrderHub> orderHub)
     {
         _billingService = billingService;
+        _orderHub = orderHub;
+    }
+
+    private async Task BroadcastAsync(string eventName)
+    {
+        var tenantId = User.FindFirst("tenantId")?.Value;
+        if (!string.IsNullOrEmpty(tenantId))
+            await _orderHub.Clients.Group($"tenant_{tenantId}").SendAsync(eventName);
     }
 
     [HttpGet("invoices")]
@@ -38,6 +49,7 @@ public class BillingController : ControllerBase
     public async Task<IActionResult> GenerateInvoice(Guid orderId, CancellationToken cancellationToken)
     {
         var result = await _billingService.GenerateInvoiceAsync(orderId, cancellationToken);
+        if (result.Success) await BroadcastAsync("BillingUpdated");
         return StatusCode(result.StatusCode, result);
     }
 

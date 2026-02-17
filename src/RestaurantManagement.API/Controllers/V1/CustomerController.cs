@@ -9,7 +9,7 @@ using RestaurantManagement.Shared.Responses;
 namespace RestaurantManagement.API.Controllers.V1;
 
 [ApiController]
-[Route("api/v1/[controller]")]
+[Route("api/v1/customers")]
 [Authorize]
 public class CustomerController : ControllerBase
 {
@@ -78,6 +78,17 @@ public class CustomerController : ControllerBase
     public async Task<IActionResult> GetLoyaltyPoints(Guid customerId, CancellationToken cancellationToken)
     {
         var result = await _customerService.GetLoyaltyPointsAsync(customerId, cancellationToken);
+        return StatusCode(result.StatusCode, result);
+    }
+
+    [HttpGet("feedback")]
+    [Authorize(Policy = Permissions.CustomerView)]
+    [ProducesResponseType(typeof(ApiResponse<List<FeedbackDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAllFeedback(
+        [FromQuery] Guid? customerId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _customerService.GetAllFeedbackAsync(customerId, cancellationToken);
         return StatusCode(result.StatusCode, result);
     }
 

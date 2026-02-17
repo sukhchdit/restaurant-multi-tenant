@@ -32,11 +32,11 @@ import {
   Mail,
   ShoppingCart,
 } from 'lucide-react';
-import type { ApiResponse } from '@/types/api.types';
+import type { ApiResponse, PaginatedResult } from '@/types/api.types';
 import type { Customer, Feedback } from '@/types/customer.types';
 
 const customerApi = {
-  getCustomers: async (params?: { search?: string }): Promise<ApiResponse<Customer[]>> => {
+  getCustomers: async (params?: { search?: string }): Promise<ApiResponse<PaginatedResult<Customer>>> => {
     const response = await axiosInstance.get('/customers', { params });
     return response.data;
   },
@@ -65,7 +65,7 @@ export const Customers = () => {
     queryFn: () => customerApi.getFeedback(),
   });
 
-  const customers = customersResponse?.data ?? [];
+  const customers = customersResponse?.data?.items ?? [];
   const feedback = feedbackResponse?.data ?? [];
 
   const totalCustomers = customers.length;

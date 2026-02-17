@@ -148,7 +148,18 @@ public class OrderService : IOrderService
             if (menuItems.Count != menuItemIds.Length)
                 return ApiResponse<OrderDto>.Fail("One or more menu items are not available.");
 
-            var orderNumber = $"ORD-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..6].ToUpper()}";
+            // Sequential order number: ORD-0001, ORD-0002, ...
+            // Use EF.Functions.Like instead of StartsWith — MySql.EntityFrameworkCore
+            // crashes on StartsWith with "COLLATE utf8mb4_bin type mapping" error
+            var lastOrder = await _orderRepository.Query()
+                .Where(o => o.RestaurantId == restaurantId.Value && EF.Functions.Like(o.OrderNumber, "ORD-%"))
+                .OrderByDescending(o => o.OrderNumber)
+                .Select(o => o.OrderNumber)
+                .FirstOrDefaultAsync(cancellationToken);
+            var nextOrderSeq = 1;
+            if (lastOrder != null && lastOrder.StartsWith("ORD-") && int.TryParse(lastOrder[4..], out var lastSeq))
+                nextOrderSeq = lastSeq + 1;
+            var orderNumber = $"ORD-{nextOrderSeq:D4}";
 
             var order = new Order
             {
@@ -227,7 +238,16 @@ public class OrderService : IOrderService
             await _orderItemRepository.AddRangeAsync(orderItems, cancellationToken);
 
             // Auto-create KOT
-            var kotNumber = $"KOT-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..6].ToUpper()}";
+            // Sequential KOT number: KOT-0001, KOT-0002, ...
+            var lastKot = await _kotRepository.Query()
+                .Where(k => k.RestaurantId == restaurantId.Value && EF.Functions.Like(k.KOTNumber, "KOT-%"))
+                .OrderByDescending(k => k.KOTNumber)
+                .Select(k => k.KOTNumber)
+                .FirstOrDefaultAsync(cancellationToken);
+            var nextKotSeq = 1;
+            if (lastKot != null && lastKot.StartsWith("KOT-") && int.TryParse(lastKot[4..], out var lastKotSeq))
+                nextKotSeq = lastKotSeq + 1;
+            var kotNumber = $"KOT-{nextKotSeq:D4}";
             string? tableNumber = null;
 
             if (dto.TableId.HasValue)
@@ -236,7 +256,7 @@ public class OrderService : IOrderService
                 if (table != null)
                 {
                     tableNumber = table.TableNumber;
-                    table.Status = TableStatus.Reserved;
+                    table.Status = TableStatus.Occupied;
                     table.CurrentOrderId = order.Id;
                     _tableRepository.Update(table);
                 }
@@ -347,7 +367,7 @@ public class OrderService : IOrderService
             if (newTable.Status != TableStatus.Available && newTable.CurrentOrderId != order.Id)
                 return ApiResponse<OrderDto>.Fail("Selected table is not available.");
 
-            newTable.Status = TableStatus.Reserved;
+            newTable.Status = TableStatus.Occupied;
             newTable.CurrentOrderId = order.Id;
             _tableRepository.Update(newTable);
             order.TableId = dto.TableId.Value;
@@ -508,7 +528,7 @@ public class OrderService : IOrderService
         // Validate state transitions
         var validTransitions = new Dictionary<OrderStatus, OrderStatus[]>
         {
-            { OrderStatus.Pending, new[] { OrderStatus.Confirmed, OrderStatus.Cancelled } },
+            { OrderStatus.Pending, new[] { OrderStatus.Confirmed, OrderStatus.Preparing, OrderStatus.Cancelled } },
             { OrderStatus.Confirmed, new[] { OrderStatus.Preparing, OrderStatus.Cancelled } },
             { OrderStatus.Preparing, new[] { OrderStatus.Ready, OrderStatus.Cancelled } },
             { OrderStatus.Ready, new[] { OrderStatus.Served } },
@@ -518,35 +538,26 @@ public class OrderService : IOrderService
         if (!validTransitions.TryGetValue(order.Status, out var allowedStatuses) || !allowedStatuses.Contains(dto.Status))
             return ApiResponse<OrderDto>.Fail($"Cannot transition from {order.Status} to {dto.Status}.");
 
+        var previousStatus = order.Status;
         order.Status = dto.Status;
         order.UpdatedAt = DateTime.UtcNow;
         order.UpdatedBy = _currentUser.UserId;
 
-        // Auto stock deduction on Confirmed + mark table as Occupied
-        if (dto.Status == OrderStatus.Confirmed)
+        // Auto stock deduction when entering Confirmed, or Preparing directly from Pending
+        if (dto.Status == OrderStatus.Confirmed || (dto.Status == OrderStatus.Preparing && previousStatus == OrderStatus.Pending))
         {
             await DeductStockForOrderAsync(order, cancellationToken);
-
-            if (order.TableId.HasValue)
-            {
-                var table = await _tableRepository.GetByIdAsync(order.TableId.Value, cancellationToken);
-                if (table != null)
-                {
-                    table.Status = TableStatus.Occupied;
-                    table.UpdatedAt = DateTime.UtcNow;
-                    _tableRepository.Update(table);
-                }
-            }
         }
 
-        // Free table on Completed
-        if (dto.Status == OrderStatus.Completed && order.TableId.HasValue)
+        // Free table on Served or Completed
+        if ((dto.Status == OrderStatus.Served || dto.Status == OrderStatus.Completed) && order.TableId.HasValue)
         {
             var table = await _tableRepository.GetByIdAsync(order.TableId.Value, cancellationToken);
-            if (table != null)
+            if (table != null && table.CurrentOrderId == order.Id)
             {
                 table.Status = TableStatus.Available;
                 table.CurrentOrderId = null;
+                table.UpdatedAt = DateTime.UtcNow;
                 _tableRepository.Update(table);
             }
         }

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using RestaurantManagement.API.Hubs;
 using RestaurantManagement.Application.DTOs.Inventory;
 using RestaurantManagement.Application.Interfaces;
 using RestaurantManagement.Shared.Constants;
@@ -13,10 +15,19 @@ namespace RestaurantManagement.API.Controllers.V1;
 public class InventoryController : ControllerBase
 {
     private readonly IInventoryService _inventoryService;
+    private readonly IHubContext<OrderHub> _orderHub;
 
-    public InventoryController(IInventoryService inventoryService)
+    public InventoryController(IInventoryService inventoryService, IHubContext<OrderHub> orderHub)
     {
         _inventoryService = inventoryService;
+        _orderHub = orderHub;
+    }
+
+    private async Task BroadcastAsync(string eventName)
+    {
+        var tenantId = User.FindFirst("tenantId")?.Value;
+        if (!string.IsNullOrEmpty(tenantId))
+            await _orderHub.Clients.Group($"tenant_{tenantId}").SendAsync(eventName);
     }
 
     [HttpGet]
@@ -40,6 +51,7 @@ public class InventoryController : ControllerBase
     public async Task<IActionResult> CreateItem([FromBody] CreateInventoryItemDto dto, CancellationToken cancellationToken)
     {
         var result = await _inventoryService.CreateItemAsync(dto, cancellationToken);
+        if (result.Success) await BroadcastAsync("InventoryUpdated");
         return StatusCode(result.StatusCode, result);
     }
 
@@ -50,6 +62,7 @@ public class InventoryController : ControllerBase
     public async Task<IActionResult> UpdateItem(Guid id, [FromBody] CreateInventoryItemDto dto, CancellationToken cancellationToken)
     {
         var result = await _inventoryService.UpdateItemAsync(id, dto, cancellationToken);
+        if (result.Success) await BroadcastAsync("InventoryUpdated");
         return StatusCode(result.StatusCode, result);
     }
 
@@ -60,6 +73,7 @@ public class InventoryController : ControllerBase
     public async Task<IActionResult> Restock(Guid id, [FromBody] RestockDto dto, CancellationToken cancellationToken)
     {
         var result = await _inventoryService.RestockAsync(id, dto, cancellationToken);
+        if (result.Success) await BroadcastAsync("InventoryUpdated");
         return StatusCode(result.StatusCode, result);
     }
 

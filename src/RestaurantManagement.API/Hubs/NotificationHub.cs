@@ -16,7 +16,7 @@ public class NotificationHub : Hub
     public override async Task OnConnectedAsync()
     {
         var userId = Context.UserIdentifier;
-        var tenantId = Context.User?.FindFirst("tenant_id")?.Value;
+        var tenantId = Context.User?.FindFirst("tenantId")?.Value;
 
         if (!string.IsNullOrEmpty(tenantId))
         {

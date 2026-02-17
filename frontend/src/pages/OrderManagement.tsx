@@ -26,12 +26,11 @@ import {
   Search, Plus, Eye, Trash2, Clock, CheckCircle, Minus, Pencil,
   List, Columns2, Columns3, Columns4, ClipboardList,
   ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight,
-  Leaf, Printer, RotateCcw, X,
+  Leaf, Printer, RotateCcw, X, CalendarDays,
 } from 'lucide-react';
 import { cn } from '@/components/ui/utils';
 import { toast } from 'sonner';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { useOrderSignalR } from '@/hooks/useOrderSignalR';
 import { KeyboardShortcutHint } from '@/components/keyboard/KeyboardShortcutHint';
 import { printBill } from '@/components/order/PrintBill';
 import type { Order, OrderStatus, OrderType, CreateOrderRequest, UpdateOrderRequest } from '@/types/order.types';
@@ -187,6 +186,7 @@ export const OrderManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [pageNumber, setPageNumber] = useState(1);
+  const [dateFilter, setDateFilter] = useState(() => new Date().toISOString().split('T')[0]);
   const [gridCols, setGridCols] = useState<1 | 2 | 3 | 4>(4);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -219,14 +219,14 @@ export const OrderManagement = () => {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
-  useOrderSignalR();
-
   // ── Queries ──
   const { data: ordersResponse, isLoading } = useQuery({
-    queryKey: ['orders', searchTerm, activeTab, pageNumber],
+    queryKey: ['orders', searchTerm, activeTab, pageNumber, dateFilter],
     queryFn: () => orderApi.getOrders({
       search: searchTerm || undefined,
       status: activeTab !== 'all' ? activeTab : undefined,
+      fromDate: dateFilter || undefined,
+      toDate: dateFilter ? `${dateFilter}T23:59:59` : undefined,
       pageNumber,
       pageSize: PAGE_SIZE,
     }),
@@ -505,6 +505,11 @@ export const OrderManagement = () => {
     setPageNumber(1);
   };
 
+  const handleDateChange = (value: string) => {
+    setDateFilter(value);
+    setPageNumber(1);
+  };
+
   const pageShortcuts = useMemo(() => ({
     'n': () => setMainTab('new-order'),
     '/': () => searchInputRef.current?.focus(),
@@ -552,7 +557,7 @@ export const OrderManagement = () => {
               <span className="shrink-0 text-xs text-muted-foreground">{order.orderNumber}</span>
             </div>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              {order.tableNumber ? `Table ${order.tableNumber}` : 'No table'} &bull; {new Date(order.createdAt).toLocaleTimeString()}
+              {order.tableNumber ? `Table ${order.tableNumber}` : 'No table'} &bull; {new Date(order.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })} {new Date(order.createdAt).toLocaleTimeString()}
             </p>
           </div>
           <Badge className={cn('shrink-0', statusColors[order.status])}>
@@ -704,7 +709,7 @@ export const OrderManagement = () => {
               </div>
             </div>
 
-            {/* Search + View Toggle */}
+            {/* Search + Date Filter + View Toggle */}
             <div className="flex items-center justify-between gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -715,6 +720,39 @@ export const OrderManagement = () => {
                   onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-10"
                 />
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <CalendarDays className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <Input
+                    type="date"
+                    value={dateFilter}
+                    onChange={(e) => handleDateChange(e.target.value)}
+                    className="pl-10 w-44 h-9"
+                  />
+                </div>
+                {dateFilter ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 px-2 text-muted-foreground hover:text-foreground"
+                    onClick={() => handleDateChange('')}
+                    title="Show all dates"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    All
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 px-2 text-muted-foreground hover:text-foreground"
+                    onClick={() => handleDateChange(new Date().toISOString().split('T')[0])}
+                    title="Show today's orders"
+                  >
+                    Today
+                  </Button>
+                )}
               </div>
               <div className="hidden lg:flex items-center gap-1 rounded-lg border border-border p-1">
                 {([
@@ -763,12 +801,16 @@ export const OrderManagement = () => {
                   <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                     <ClipboardList className="h-12 w-12 mb-3" />
                     <p className="font-medium">
-                      {activeTab === 'all' ? 'No orders yet' : `No ${activeTab} orders`}
+                      {activeTab === 'all'
+                        ? (dateFilter ? 'No orders for this date' : 'No orders yet')
+                        : `No ${activeTab} orders`}
                     </p>
                     <p className="text-sm">
                       {activeTab === 'all'
-                        ? 'Create your first order to get started.'
-                        : `There are no orders with "${activeTab}" status.`}
+                        ? (dateFilter
+                          ? 'Try selecting a different date or click "All" to see all orders.'
+                          : 'Create your first order to get started.')
+                        : `There are no orders with "${activeTab}" status${dateFilter ? ' for this date' : ''}.`}
                     </p>
                   </div>
                 ) : (

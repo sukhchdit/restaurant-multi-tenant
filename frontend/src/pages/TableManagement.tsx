@@ -28,7 +28,6 @@ import {
 import { cn } from '@/components/ui/utils';
 import { toast } from 'sonner';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { useOrderSignalR } from '@/hooks/useOrderSignalR';
 import { KeyboardShortcutHint } from '@/components/keyboard/KeyboardShortcutHint';
 import { printBill } from '@/components/order/PrintBill';
 import type { RestaurantTable, TableStatus, CreateTableRequest } from '@/types/table.types';
@@ -199,8 +198,6 @@ export const TableManagement = () => {
   const [paidAmount, setPaidAmount] = useState(0);
 
   const queryClient = useQueryClient();
-  useOrderSignalR();
-
   const pageShortcuts = useMemo(() => ({
     'n': () => setAddDialogOpen(true),
   }), []);

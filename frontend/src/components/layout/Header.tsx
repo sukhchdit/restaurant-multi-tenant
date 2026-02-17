@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import { Bell, Search, Moon, Sun } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useQuery } from '@tanstack/react-query';
@@ -7,17 +8,13 @@ import { orderApi } from '@/services/api/orderApi';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 export const Header = () => {
   const { user } = useSelector((state: RootState) => state.auth);
   const { isDarkMode } = useSelector((state: RootState) => state.ui);
   const dispatch = useDispatch();
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   const { data: dashboardStats } = useQuery({
     queryKey: ['dashboardStats'],
@@ -30,6 +27,18 @@ export const Header = () => {
   const handleToggleTheme = () => {
     dispatch(toggleDarkMode());
   };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!notifOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [notifOpen]);
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-border bg-card px-6 shadow-sm">
@@ -60,40 +69,45 @@ export const Header = () => {
         </Button>
 
         {/* Notifications */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              {pendingOrders > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center p-0 text-xs"
-                >
-                  {pendingOrders}
-                </Badge>
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <div className="p-2">
-              <h4 className="mb-2 font-semibold">Notifications</h4>
+        <div className="relative" ref={notifRef}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
+            onClick={() => setNotifOpen((prev) => !prev)}
+          >
+            <Bell className="h-5 w-5" />
+            {pendingOrders > 0 && (
+              <Badge
+                variant="destructive"
+                className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center p-0 text-xs"
+              >
+                {pendingOrders}
+              </Badge>
+            )}
+          </Button>
+
+          {notifOpen && (
+            <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-md border bg-popover p-4 text-popover-foreground shadow-md">
+              <h4 className="mb-3 font-semibold">Notifications</h4>
               {pendingOrders > 0 ? (
-                <DropdownMenuItem>
+                <div className="flex items-start gap-3 rounded-lg border p-3">
+                  <Bell className="mt-0.5 h-4 w-4 text-primary" />
                   <div className="flex flex-col gap-1">
-                    <p className="font-medium">New Orders</p>
+                    <p className="text-sm font-medium">New Orders</p>
                     <p className="text-sm text-muted-foreground">
-                      You have {pendingOrders} pending orders
+                      You have {pendingOrders} pending order{pendingOrders !== 1 ? 's' : ''}
                     </p>
                   </div>
-                </DropdownMenuItem>
+                </div>
               ) : (
                 <p className="py-4 text-center text-sm text-muted-foreground">
                   No new notifications
                 </p>
               )}
             </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          )}
+        </div>
 
         {/* User Info */}
         <div className="hidden items-center gap-3 rounded-lg bg-muted px-3 py-2 md:flex">

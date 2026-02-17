@@ -100,17 +100,20 @@ public class ReportService : IReportService
     }
 
     public async Task<ApiResponse<List<RevenueChartDto>>> GetRevenueTrendAsync(
-        int months = 6, CancellationToken cancellationToken = default)
+        int months = 6, DateTime? fromDate = null, DateTime? toDate = null,
+        CancellationToken cancellationToken = default)
     {
         var restaurantId = _currentUser.RestaurantId;
         if (restaurantId == null)
             return ApiResponse<List<RevenueChartDto>>.Fail("Restaurant context not found.", 403);
 
-        var startDate = DateTime.UtcNow.AddMonths(-months).Date;
+        var useDateRange = fromDate.HasValue && toDate.HasValue;
+        var from = fromDate ?? DateTime.UtcNow.AddMonths(-months).Date;
+        var to = toDate ?? DateTime.UtcNow;
 
         var orders = await _orderRepository.QueryNoTracking()
             .Where(o => o.RestaurantId == restaurantId.Value && !o.IsDeleted
-                        && o.CreatedAt >= startDate
+                        && o.CreatedAt >= from && o.CreatedAt <= to
                         && (o.Status == OrderStatus.Completed || o.PaymentStatus == PaymentStatus.Paid))
             .ToListAsync(cancellationToken);
 
@@ -126,30 +129,46 @@ public class ReportService : IReportService
 
         // Fill in missing months with zero revenue
         var result = new List<RevenueChartDto>();
-        for (int i = months - 1; i >= 0; i--)
+        if (useDateRange)
         {
-            var date = DateTime.UtcNow.AddMonths(-i);
-            var monthLabel = date.ToString("MMM yyyy");
-            var existing = trend.FirstOrDefault(t => t.Label == monthLabel);
-            result.Add(new RevenueChartDto
+            var current = new DateTime(from.Year, from.Month, 1);
+            var end = new DateTime(to.Year, to.Month, 1);
+            while (current <= end)
             {
-                Label = monthLabel,
-                Revenue = existing?.Revenue ?? 0
-            });
+                var monthLabel = current.ToString("MMM yyyy");
+                var existing = trend.FirstOrDefault(t => t.Label == monthLabel);
+                result.Add(new RevenueChartDto
+                {
+                    Label = monthLabel,
+                    Revenue = existing?.Revenue ?? 0
+                });
+                current = current.AddMonths(1);
+            }
+        }
+        else
+        {
+            for (int i = months - 1; i >= 0; i--)
+            {
+                var date = DateTime.UtcNow.AddMonths(-i);
+                var monthLabel = date.ToString("MMM yyyy");
+                var existing = trend.FirstOrDefault(t => t.Label == monthLabel);
+                result.Add(new RevenueChartDto
+                {
+                    Label = monthLabel,
+                    Revenue = existing?.Revenue ?? 0
+                });
+            }
         }
 
         return ApiResponse<List<RevenueChartDto>>.Ok(result);
     }
 
     public async Task<ApiResponse<List<CategoryDistributionDto>>> GetCategoryDistributionAsync(
-        DateTime? fromDate = null, DateTime? toDate = null, CancellationToken cancellationToken = default)
+        DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default)
     {
         var restaurantId = _currentUser.RestaurantId;
         if (restaurantId == null)
             return ApiResponse<List<CategoryDistributionDto>>.Fail("Restaurant context not found.", 403);
-
-        var from = fromDate ?? DateTime.UtcNow.AddMonths(-1);
-        var to = toDate ?? DateTime.UtcNow;
 
         var orderItems = await _orderItemRepository.QueryNoTracking()
             .Include(oi => oi.Order)
@@ -157,7 +176,7 @@ public class ReportService : IReportService
                 .ThenInclude(mi => mi.Category)
             .Where(oi => oi.Order.RestaurantId == restaurantId.Value
                          && !oi.IsDeleted && !oi.Order.IsDeleted
-                         && oi.Order.CreatedAt >= from && oi.Order.CreatedAt <= to
+                         && oi.Order.CreatedAt >= fromDate && oi.Order.CreatedAt <= toDate
                          && (oi.Order.Status == OrderStatus.Completed || oi.Order.PaymentStatus == PaymentStatus.Paid))
             .ToListAsync(cancellationToken);
 
@@ -178,15 +197,12 @@ public class ReportService : IReportService
     }
 
     public async Task<ApiResponse<List<TopMenuItemDto>>> GetTopItemsAsync(
-        int count = 10, DateTime? fromDate = null, DateTime? toDate = null,
+        int count, DateTime fromDate, DateTime toDate,
         CancellationToken cancellationToken = default)
     {
         var restaurantId = _currentUser.RestaurantId;
         if (restaurantId == null)
             return ApiResponse<List<TopMenuItemDto>>.Fail("Restaurant context not found.", 403);
-
-        var from = fromDate ?? DateTime.UtcNow.AddMonths(-1);
-        var to = toDate ?? DateTime.UtcNow;
 
         var orderItems = await _orderItemRepository.QueryNoTracking()
             .Include(oi => oi.Order)
@@ -194,7 +210,7 @@ public class ReportService : IReportService
                 .ThenInclude(mi => mi.Category)
             .Where(oi => oi.Order.RestaurantId == restaurantId.Value
                          && !oi.IsDeleted && !oi.Order.IsDeleted
-                         && oi.Order.CreatedAt >= from && oi.Order.CreatedAt <= to
+                         && oi.Order.CreatedAt >= fromDate && oi.Order.CreatedAt <= toDate
                          && (oi.Order.Status == OrderStatus.Completed || oi.Order.PaymentStatus == PaymentStatus.Paid))
             .ToListAsync(cancellationToken);
 
