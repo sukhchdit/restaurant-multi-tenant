@@ -107,7 +107,7 @@ export const CustomerApp = () => {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <p className="text-lg font-bold text-primary">
-                  ${item.price.toFixed(2)}
+                  Rs. {item.price.toFixed(2)}
                 </p>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
@@ -231,11 +231,11 @@ export const CustomerApp = () => {
                         <div className="flex-1">
                           <p className="font-medium">{item.name}</p>
                           <p className="text-sm text-muted-foreground">
-                            ${item.price.toFixed(2)} x {quantity}
+                            Rs. {item.price.toFixed(2)} x {quantity}
                           </p>
                         </div>
                         <p className="font-semibold">
-                          ${(item.price * quantity).toFixed(2)}
+                          Rs. {(item.price * quantity).toFixed(2)}
                         </p>
                       </div>
                     ))}
@@ -243,16 +243,16 @@ export const CustomerApp = () => {
                     <div className="space-y-2 border-t border-border pt-3">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Subtotal</span>
-                        <span>${cartTotal.toFixed(2)}</span>
+                        <span>Rs. {cartTotal.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Tax (12%)</span>
-                        <span>${(cartTotal * 0.12).toFixed(2)}</span>
+                        <span>Rs. {(cartTotal * 0.12).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between font-bold text-lg">
                         <span>Total</span>
                         <span className="text-primary">
-                          ${(cartTotal * 1.12).toFixed(2)}
+                          Rs. {(cartTotal * 1.12).toFixed(2)}
                         </span>
                       </div>
                     </div>

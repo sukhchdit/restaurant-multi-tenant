@@ -147,14 +147,14 @@ const MenuItemSearch = ({
                       {item.discountedPrice != null && item.discountedPrice < item.price ? (
                         <>
                           <span className="text-xs text-muted-foreground line-through">
-                            ${item.price.toFixed(2)}
+                            Rs. {item.price.toFixed(2)}
                           </span>
                           <span className="text-green-600">
-                            ${item.discountedPrice.toFixed(2)}
+                            Rs. {item.discountedPrice.toFixed(2)}
                           </span>
                         </>
                       ) : (
-                        <span>${item.price.toFixed(2)}</span>
+                        <span>Rs. {item.price.toFixed(2)}</span>
                       )}
                     </div>
                   </button>
@@ -766,7 +766,7 @@ export const TableManagement = () => {
                     </div>
 
                     <span className="h-9 flex items-center text-sm font-semibold min-w-[60px]">
-                      ${(stagedItem.price * (stagedIsHalf ? 1 : stagedQty)).toFixed(2)}
+                      Rs. {(stagedItem.price * (stagedIsHalf ? 1 : stagedQty)).toFixed(2)}
                     </span>
 
                     <Button className="h-9 bg-green-600 hover:bg-green-700 text-white" onClick={confirmStagedItem}>
@@ -807,9 +807,9 @@ export const TableManagement = () => {
                             {item.name}
                             {item.isHalf && <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0">Half</Badge>}
                           </td>
-                          <td className="px-4 py-2 text-right">${item.price.toFixed(2)}</td>
+                          <td className="px-4 py-2 text-right">Rs. {item.price.toFixed(2)}</td>
                           <td className="px-4 py-2 text-center">{item.quantity}</td>
-                          <td className="px-4 py-2 text-right font-medium">${(item.price * item.quantity).toFixed(2)}</td>
+                          <td className="px-4 py-2 text-right font-medium">Rs. {(item.price * item.quantity).toFixed(2)}</td>
                           <td className="px-4 py-2 text-center">
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => deleteItemFromOrder(item.menuItemId)}>
                               <Trash2 className="h-4 w-4" />
@@ -843,7 +843,7 @@ export const TableManagement = () => {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs font-medium">Total Amount</Label>
-                      <Input value={`$${subTotal.toFixed(2)}`} readOnly className="bg-muted" />
+                      <Input value={`Rs. ${subTotal.toFixed(2)}`} readOnly className="bg-muted" />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs font-medium">Discount %</Label>
@@ -858,15 +858,15 @@ export const TableManagement = () => {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs font-medium">Discount Amt</Label>
-                      <Input value={`$${discountAmount.toFixed(2)}`} readOnly className="bg-muted" />
+                      <Input value={`Rs. ${discountAmount.toFixed(2)}`} readOnly className="bg-muted" />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs font-medium">Total</Label>
-                      <Input value={`$${taxableAmount.toFixed(2)}`} readOnly className="bg-muted" />
+                      <Input value={`Rs. ${taxableAmount.toFixed(2)}`} readOnly className="bg-muted" />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs font-medium">GST</Label>
-                      <Input value={`$${gstAmount.toFixed(2)}`} readOnly className="bg-muted" />
+                      <Input value={`Rs. ${gstAmount.toFixed(2)}`} readOnly className="bg-muted" />
                     </div>
                   </div>
 
@@ -913,7 +913,7 @@ export const TableManagement = () => {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs font-medium">G.Total</Label>
-                      <Input value={`$${grandTotal.toFixed(2)}`} readOnly className="bg-muted font-bold" />
+                      <Input value={`Rs. ${grandTotal.toFixed(2)}`} readOnly className="bg-muted font-bold" />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs font-medium">VAT %</Label>

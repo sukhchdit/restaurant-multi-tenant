@@ -98,7 +98,7 @@ export const Inventory = () => {
               <TrendingDown className="h-8 w-8 text-amber-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Total Value</p>
-                <p className="text-2xl font-bold">${totalValue.toFixed(2)}</p>
+                <p className="text-2xl font-bold">Rs. {totalValue.toFixed(2)}</p>
               </div>
             </div>
           </CardContent>
@@ -160,7 +160,7 @@ export const Inventory = () => {
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        Unit: {item.unit} &bull; Cost: ${item.costPerUnit.toFixed(2)}/{item.unit}
+                        Unit: {item.unit} &bull; Cost: Rs. {item.costPerUnit.toFixed(2)}/{item.unit}
                       </p>
                     </div>
                     <div className="text-right">

@@ -290,7 +290,7 @@ export const Discounts = () => {
                     <p className="text-3xl font-bold text-primary">
                       {discount.discountType === 'percentage'
                         ? `${discount.value}%`
-                        : `$${discount.value.toFixed(2)}`}
+                        : `Rs. ${discount.value.toFixed(2)}`}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {discount.discountType === 'percentage' ? 'Off' : 'Flat Discount'}
@@ -301,13 +301,13 @@ export const Discounts = () => {
                     {discount.minOrderAmount != null && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Min Order</span>
-                        <span>${discount.minOrderAmount.toFixed(2)}</span>
+                        <span>Rs. {discount.minOrderAmount.toFixed(2)}</span>
                       </div>
                     )}
                     {discount.maxDiscountAmount != null && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Max Discount</span>
-                        <span>${discount.maxDiscountAmount.toFixed(2)}</span>
+                        <span>Rs. {discount.maxDiscountAmount.toFixed(2)}</span>
                       </div>
                     )}
                     {discount.applicableOn && (

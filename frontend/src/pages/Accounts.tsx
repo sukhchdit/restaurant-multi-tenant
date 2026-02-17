@@ -213,7 +213,7 @@ export const Accounts = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Total Income</p>
                 <p className="text-2xl font-bold text-green-600">
-                  ${totalIncome.toFixed(2)}
+                  Rs. {totalIncome.toFixed(2)}
                 </p>
               </div>
             </div>
@@ -229,7 +229,7 @@ export const Accounts = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Total Expenses</p>
                 <p className="text-2xl font-bold text-red-600">
-                  ${totalExpenses.toFixed(2)}
+                  Rs. {totalExpenses.toFixed(2)}
                 </p>
               </div>
             </div>
@@ -245,7 +245,7 @@ export const Accounts = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Net Profit</p>
                 <p className={`text-2xl font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  ${netProfit.toFixed(2)}
+                  Rs. {netProfit.toFixed(2)}
                 </p>
               </div>
             </div>
@@ -328,7 +328,7 @@ export const Accounts = () => {
                           entry.type === 'income' ? 'text-green-600' : 'text-red-600'
                         }`}
                       >
-                        {entry.type === 'income' ? '+' : '-'}${entry.amount.toFixed(2)}
+                        {entry.type === 'income' ? '+' : '-'}Rs. {entry.amount.toFixed(2)}
                       </TableCell>
                       <TableCell className="capitalize">
                         {entry.paymentMethod || '-'}
@@ -389,20 +389,20 @@ export const Accounts = () => {
                         {new Date(settlement.date).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-green-600 font-semibold">
-                        ${settlement.totalRevenue.toFixed(2)}
+                        Rs. {settlement.totalRevenue.toFixed(2)}
                       </TableCell>
                       <TableCell className="text-red-600 font-semibold">
-                        ${settlement.totalExpenses.toFixed(2)}
+                        Rs. {settlement.totalExpenses.toFixed(2)}
                       </TableCell>
-                      <TableCell>${settlement.cashInHand.toFixed(2)}</TableCell>
-                      <TableCell>${settlement.cardPayments.toFixed(2)}</TableCell>
-                      <TableCell>${settlement.onlinePayments.toFixed(2)}</TableCell>
+                      <TableCell>Rs. {settlement.cashInHand.toFixed(2)}</TableCell>
+                      <TableCell>Rs. {settlement.cardPayments.toFixed(2)}</TableCell>
+                      <TableCell>Rs. {settlement.onlinePayments.toFixed(2)}</TableCell>
                       <TableCell
                         className={`font-bold ${
                           settlement.netAmount >= 0 ? 'text-green-600' : 'text-red-600'
                         }`}
                       >
-                        ${settlement.netAmount.toFixed(2)}
+                        Rs. {settlement.netAmount.toFixed(2)}
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -497,7 +497,7 @@ export const Accounts = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Amount ($)</Label>
+                <Label>Amount (Rs.)</Label>
                 <Input
                   type="number"
                   step="0.01"
