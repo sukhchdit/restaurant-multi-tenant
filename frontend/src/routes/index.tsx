@@ -16,6 +16,7 @@ import { Customers } from '@/pages/Customers';
 import { Billing } from '@/pages/Billing';
 import { Accounts } from '@/pages/Accounts';
 import { AuditLogs } from '@/pages/AuditLogs';
+import { Notifications } from '@/pages/Notifications';
 import { RootLayout } from '@/components/layout/RootLayout';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 
@@ -141,6 +142,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['SuperAdmin', 'RestaurantAdmin']}>
             <AuditLogs />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'notifications',
+        element: (
+          <ProtectedRoute>
+            <Notifications />
           </ProtectedRoute>
         ),
       },

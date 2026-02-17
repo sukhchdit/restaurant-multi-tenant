@@ -10,7 +10,7 @@ using RestaurantManagement.Shared.Responses;
 namespace RestaurantManagement.API.Controllers.V1;
 
 [ApiController]
-[Route("api/v1/[controller]")]
+[Route("api/v1/notifications")]
 [Authorize]
 public class NotificationController : ControllerBase
 {
@@ -36,9 +36,10 @@ public class NotificationController : ControllerBase
     public async Task<IActionResult> GetNotifications(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] bool? isRead = null,
         CancellationToken cancellationToken = default)
     {
-        var result = await _notificationService.GetNotificationsAsync(pageNumber, pageSize, cancellationToken);
+        var result = await _notificationService.GetNotificationsAsync(pageNumber, pageSize, isRead, cancellationToken);
         return StatusCode(result.StatusCode, result);
     }
 
@@ -69,6 +70,17 @@ public class NotificationController : ControllerBase
     public async Task<IActionResult> GetUnreadCount(CancellationToken cancellationToken)
     {
         var result = await _notificationService.GetUnreadCountAsync(cancellationToken);
+        return StatusCode(result.StatusCode, result);
+    }
+
+    [HttpDelete("{id:guid}")]
+    [Authorize(Policy = Permissions.NotificationView)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _notificationService.DeleteAsync(id, cancellationToken);
+        if (result.Success) await BroadcastAsync("NotificationUpdated");
         return StatusCode(result.StatusCode, result);
     }
 }

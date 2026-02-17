@@ -16,7 +16,7 @@ const EVENT_QUERY_MAP: Record<string, string[]> = {
   PaymentUpdated: ['payments', 'orders', 'dashboardStats', 'invoices', 'ledger', 'settlements', 'auditLogs'],
   DiscountUpdated: ['discounts', 'auditLogs'],
   BillingUpdated: ['invoices', 'payments', 'ledger', 'auditLogs'],
-  NotificationUpdated: ['dashboardStats'],
+  NotificationUpdated: ['dashboardStats', 'notifications', 'unreadNotificationCount'],
 };
 
 export const useRealtimeSync = () => {

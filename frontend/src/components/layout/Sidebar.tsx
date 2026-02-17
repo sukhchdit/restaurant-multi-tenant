@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router';
-import { useSelector, useDispatch } from 'react-redux';
-import type { RootState, AppDispatch } from '@/store/store';
-import { logout } from '@/store/slices/authSlice';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/store/store';
 import {
   LayoutDashboard,
   UtensilsCrossed,
@@ -13,15 +12,14 @@ import {
   Users,
   BarChart3,
   Settings,
-  LogOut,
   CreditCard,
   Percent,
   UserCircle,
   Receipt,
   BookOpen,
   ClipboardList,
-  PanelLeftClose,
-  PanelLeftOpen,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/components/ui/utils';
 
@@ -127,7 +125,6 @@ const STORAGE_KEY = 'sidebar-collapsed';
 
 export const Sidebar = () => {
   const { user } = useSelector((state: RootState) => state.auth);
-  const dispatch = useDispatch<AppDispatch>();
 
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -143,10 +140,6 @@ export const Sidebar = () => {
     } catch { /* ignore */ }
   }, [collapsed]);
 
-  const handleLogout = () => {
-    dispatch(logout());
-  };
-
   const filteredNavItems = navItems.filter((item) => {
     if (!item.roles) return true;
     return user && item.roles.includes(user.role);
@@ -155,10 +148,22 @@ export const Sidebar = () => {
   return (
     <aside
       className={cn(
-        'flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300',
+        'relative flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300',
         collapsed ? 'w-[68px]' : 'w-64'
       )}
     >
+      {/* Collapse toggle badge on right border */}
+      <button
+        onClick={() => setCollapsed((c) => !c)}
+        className="absolute -right-3 top-7 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-primary text-primary-foreground shadow-sm transition-colors hover:opacity-90"
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        {collapsed
+          ? <ChevronRight className="h-3.5 w-3.5" />
+          : <ChevronLeft className="h-3.5 w-3.5" />
+        }
+      </button>
+
       {/* Logo & Restaurant Info */}
       <div className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-3">
@@ -210,72 +215,6 @@ export const Sidebar = () => {
         </ul>
       </nav>
 
-      {/* User Profile & Logout */}
-      <div className="border-t border-sidebar-border p-2">
-        {/* User info */}
-        {collapsed ? (
-          <div className="mb-2 flex justify-center" title={user?.fullName}>
-            {user?.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt={user.fullName}
-                className="h-9 w-9 rounded-full"
-              />
-            ) : (
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
-                {user?.fullName.charAt(0)}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="mb-2 flex items-center gap-3 rounded-lg bg-sidebar-accent p-3">
-            {user?.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt={user.fullName}
-                className="h-10 w-10 rounded-full"
-              />
-            ) : (
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                {user?.fullName.charAt(0)}
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="truncate font-medium text-sidebar-accent-foreground">{user?.fullName}</p>
-              <p className="truncate text-xs text-sidebar-accent-foreground/60">{user?.email}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          title={collapsed ? 'Logout' : undefined}
-          className={cn(
-            'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/80 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-            collapsed && 'justify-center px-0'
-          )}
-        >
-          <LogOut className="h-5 w-5 shrink-0" />
-          {!collapsed && <span className="font-medium">Logout</span>}
-        </button>
-
-        {/* Collapse toggle */}
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          className={cn(
-            'mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/80 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-            collapsed && 'justify-center px-0'
-          )}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed
-            ? <PanelLeftOpen className="h-5 w-5 shrink-0" />
-            : <PanelLeftClose className="h-5 w-5 shrink-0" />
-          }
-          {!collapsed && <span className="font-medium">Collapse</span>}
-        </button>
-      </div>
     </aside>
   );
 };

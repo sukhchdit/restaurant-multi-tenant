@@ -166,23 +166,23 @@ export const Dashboard = () => {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent Orders */}
-        <Card>
+        <Card className="flex flex-col">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Recent Orders</CardTitle>
             <Link to="/orders">
               <Button variant="ghost" size="sm">View All</Button>
             </Link>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex flex-1 flex-col gap-4">
             {ordersLoading ? (
               Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-20 w-full" />
+                <Skeleton key={i} className="h-20 w-full flex-1" />
               ))
             ) : (
               recentOrders.slice(0, 5).map((order) => (
                 <div
                   key={order.id}
-                  className="flex items-center justify-between rounded-lg border border-primary/40 bg-primary/[0.03] p-4 transition-all hover:border-primary/60 hover:shadow-md"
+                  className="flex flex-1 items-center justify-between rounded-lg border border-primary/40 bg-primary/[0.03] p-4 transition-all hover:border-primary/60 hover:shadow-md"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
@@ -216,18 +216,18 @@ export const Dashboard = () => {
         </Card>
 
         {/* Order Status Overview */}
-        <Card>
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle>Order Status</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex flex-1 flex-col gap-4">
             {statsLoading ? (
               Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-20 w-full" />
+                <Skeleton key={i} className="h-20 w-full flex-1" />
               ))
             ) : (
               <>
-                <div className="flex items-center justify-between rounded-lg border border-amber-600 bg-amber-50 p-4 dark:bg-amber-950/20">
+                <div className="flex flex-1 items-center justify-between rounded-lg border border-amber-600 bg-amber-50 p-4 dark:bg-amber-950/20">
                   <div className="flex items-center gap-3">
                     <Clock className="h-8 w-8 text-amber-600" />
                     <div>
@@ -240,7 +240,7 @@ export const Dashboard = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between rounded-lg border border-blue-600 bg-blue-50 p-4 dark:bg-blue-950/20">
+                <div className="flex flex-1 items-center justify-between rounded-lg border border-blue-600 bg-blue-50 p-4 dark:bg-blue-950/20">
                   <div className="flex items-center gap-3">
                     <TrendingUp className="h-8 w-8 text-blue-600" />
                     <div>
@@ -253,7 +253,7 @@ export const Dashboard = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between rounded-lg border border-green-600 bg-green-50 p-4 dark:bg-green-950/20">
+                <div className="flex flex-1 items-center justify-between rounded-lg border border-green-600 bg-green-50 p-4 dark:bg-green-950/20">
                   <div className="flex items-center gap-3">
                     <CheckCircle className="h-8 w-8 text-green-600" />
                     <div>
