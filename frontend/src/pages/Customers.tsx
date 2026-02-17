@@ -218,7 +218,7 @@ export const Customers = () => {
                   <TableCell>{customer.phone}</TableCell>
                   <TableCell>{customer.totalOrders}</TableCell>
                   <TableCell className="font-semibold">
-                    ${customer.totalSpent.toFixed(2)}
+                    Rs. {customer.totalSpent.toFixed(2)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
@@ -351,7 +351,7 @@ export const Customers = () => {
                 <div className="rounded-lg bg-muted p-4 text-center">
                   <DollarSign className="mx-auto h-5 w-5 text-muted-foreground" />
                   <p className="mt-1 text-lg font-bold">
-                    ${selectedCustomer.totalSpent.toFixed(0)}
+                    Rs. {selectedCustomer.totalSpent.toFixed(0)}
                   </p>
                   <p className="text-xs text-muted-foreground">Spent</p>
                 </div>

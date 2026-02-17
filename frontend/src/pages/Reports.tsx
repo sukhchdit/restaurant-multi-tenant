@@ -245,7 +245,7 @@ export const Reports = () => {
                 <div>
                   <p className="text-sm text-muted-foreground">Total Revenue</p>
                   <p className="text-2xl font-bold">
-                    ${(salesReport?.totalRevenue ?? 0).toFixed(2)}
+                    Rs. {(salesReport?.totalRevenue ?? 0).toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -275,7 +275,7 @@ export const Reports = () => {
                 <div>
                   <p className="text-sm text-muted-foreground">Avg Order Value</p>
                   <p className="text-2xl font-bold">
-                    ${(salesReport?.averageOrderValue ?? 0).toFixed(2)}
+                    Rs. {(salesReport?.averageOrderValue ?? 0).toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -377,7 +377,7 @@ export const Reports = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold">${item.price.toFixed(2)}</p>
+                    <p className="font-semibold">Rs. {item.price.toFixed(2)}</p>
                     <p className="text-sm text-muted-foreground">
                       {item.orderCount} orders
                     </p>

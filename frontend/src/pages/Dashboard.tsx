@@ -111,7 +111,7 @@ export const Dashboard = () => {
               <Skeleton className="h-8 w-24" />
             ) : (
               <>
-                <div className="text-2xl font-bold">${(stats?.todayRevenue ?? 0).toFixed(2)}</div>
+                <div className="text-2xl font-bold">Rs. {(stats?.todayRevenue ?? 0).toFixed(2)}</div>
                 <p className="text-xs text-muted-foreground">
                   <span className="text-secondary">+8%</span> from yesterday
                 </p>
@@ -196,7 +196,7 @@ export const Dashboard = () => {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold">${order.totalAmount.toFixed(2)}</p>
+                    <p className="font-semibold">Rs. {order.totalAmount.toFixed(2)}</p>
                     <Badge
                       variant={
                         order.status === 'completed'

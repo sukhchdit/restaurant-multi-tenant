@@ -30,9 +30,9 @@ export function printBill(data: PrintBillData) {
         `<tr>
           <td style="padding:4px 8px;border-bottom:1px solid #ddd">${i + 1}</td>
           <td style="padding:4px 8px;border-bottom:1px solid #ddd">${item.name}</td>
-          <td style="padding:4px 8px;border-bottom:1px solid #ddd;text-align:right">${item.rate.toFixed(2)}</td>
+          <td style="padding:4px 8px;border-bottom:1px solid #ddd;text-align:right">Rs. ${item.rate.toFixed(2)}</td>
           <td style="padding:4px 8px;border-bottom:1px solid #ddd;text-align:center">${item.qty}</td>
-          <td style="padding:4px 8px;border-bottom:1px solid #ddd;text-align:right">${(item.rate * item.qty).toFixed(2)}</td>
+          <td style="padding:4px 8px;border-bottom:1px solid #ddd;text-align:right">Rs. ${(item.rate * item.qty).toFixed(2)}</td>
         </tr>`
     )
     .join('');
@@ -70,14 +70,14 @@ export function printBill(data: PrintBillData) {
     <tbody>${rows}</tbody>
   </table>
   <div class="totals">
-    <div class="row"><span>Sub Total</span><span>${data.subTotal.toFixed(2)}</span></div>
-    ${data.discountAmount > 0 ? `<div class="row"><span>Discount (${data.discountPercentage}%)</span><span>-${data.discountAmount.toFixed(2)}</span></div>` : ''}
-    ${data.gstAmount > 0 ? `<div class="row"><span>GST</span><span>${data.gstAmount.toFixed(2)}</span></div>` : ''}
-    ${data.vatAmount > 0 ? `<div class="row"><span>VAT</span><span>${data.vatAmount.toFixed(2)}</span></div>` : ''}
-    ${data.extraCharges > 0 ? `<div class="row"><span>Extra Charges</span><span>${data.extraCharges.toFixed(2)}</span></div>` : ''}
-    <div class="row grand"><span>Grand Total</span><span>${data.grandTotal.toFixed(2)}</span></div>
-    <div class="row"><span>Paid</span><span>${data.paidAmount.toFixed(2)}</span></div>
-    ${balance > 0 ? `<div class="row" style="color:#e11d48"><span>Balance Due</span><span>${balance.toFixed(2)}</span></div>` : ''}
+    <div class="row"><span>Sub Total</span><span>Rs. ${data.subTotal.toFixed(2)}</span></div>
+    ${data.discountAmount > 0 ? `<div class="row"><span>Discount (${data.discountPercentage}%)</span><span>-Rs. ${data.discountAmount.toFixed(2)}</span></div>` : ''}
+    ${data.gstAmount > 0 ? `<div class="row"><span>GST</span><span>Rs. ${data.gstAmount.toFixed(2)}</span></div>` : ''}
+    ${data.vatAmount > 0 ? `<div class="row"><span>VAT</span><span>Rs. ${data.vatAmount.toFixed(2)}</span></div>` : ''}
+    ${data.extraCharges > 0 ? `<div class="row"><span>Extra Charges</span><span>Rs. ${data.extraCharges.toFixed(2)}</span></div>` : ''}
+    <div class="row grand"><span>Grand Total</span><span>Rs. ${data.grandTotal.toFixed(2)}</span></div>
+    <div class="row"><span>Paid</span><span>Rs. ${data.paidAmount.toFixed(2)}</span></div>
+    ${balance > 0 ? `<div class="row" style="color:#e11d48"><span>Balance Due</span><span>Rs. ${balance.toFixed(2)}</span></div>` : ''}
   </div>
   <div class="footer">Thank you for dining with us!</div>
   <script>window.onload = function() { window.print(); }</script>

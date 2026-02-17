@@ -160,7 +160,7 @@ export const Payments = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold">${totalRevenue.toFixed(2)}</p>
+                <p className="text-2xl font-bold">Rs. {totalRevenue.toFixed(2)}</p>
               </div>
             </div>
           </CardContent>
@@ -231,7 +231,7 @@ export const Payments = () => {
                     {payment.orderNumber || payment.orderId.slice(0, 8)}
                   </TableCell>
                   <TableCell className="font-semibold">
-                    ${payment.amount.toFixed(2)}
+                    Rs. {payment.amount.toFixed(2)}
                   </TableCell>
                   <TableCell className="capitalize">{payment.paymentMethod}</TableCell>
                   <TableCell className="font-mono text-sm">
@@ -301,7 +301,7 @@ export const Payments = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount ($)</Label>
+              <Label htmlFor="amount">Amount (Rs.)</Label>
               <Input
                 id="amount"
                 type="number"

@@ -196,7 +196,7 @@ export const Billing = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Invoiced</p>
-                <p className="text-2xl font-bold">${totalInvoiced.toFixed(2)}</p>
+                <p className="text-2xl font-bold">Rs. {totalInvoiced.toFixed(2)}</p>
               </div>
             </div>
           </CardContent>
@@ -210,7 +210,7 @@ export const Billing = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Paid</p>
-                <p className="text-2xl font-bold text-green-600">${totalPaid.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-green-600">Rs. {totalPaid.toFixed(2)}</p>
               </div>
             </div>
           </CardContent>
@@ -255,7 +255,7 @@ export const Billing = () => {
                   <TableCell>{invoice.orderNumber || invoice.orderId.slice(0, 8)}</TableCell>
                   <TableCell>{invoice.customerName || 'Guest'}</TableCell>
                   <TableCell className="font-semibold">
-                    ${invoice.totalAmount.toFixed(2)}
+                    Rs. {invoice.totalAmount.toFixed(2)}
                   </TableCell>
                   <TableCell>
                     <Badge className={statusColors[invoice.paymentStatus]}>
@@ -342,10 +342,10 @@ export const Billing = () => {
                       <div>
                         <p className="font-medium">{item.description}</p>
                         <p className="text-sm text-muted-foreground">
-                          {item.quantity} x ${item.unitPrice.toFixed(2)}
+                          {item.quantity} x Rs. {item.unitPrice.toFixed(2)}
                         </p>
                       </div>
-                      <p className="font-semibold">${item.totalPrice.toFixed(2)}</p>
+                      <p className="font-semibold">Rs. {item.totalPrice.toFixed(2)}</p>
                     </div>
                   ))}
                 </div>
@@ -354,36 +354,36 @@ export const Billing = () => {
               <div className="space-y-2 border-t border-border pt-4">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span>${selectedInvoice.subTotal.toFixed(2)}</span>
+                  <span>Rs. {selectedInvoice.subTotal.toFixed(2)}</span>
                 </div>
                 {selectedInvoice.discountAmount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Discount</span>
-                    <span>-${selectedInvoice.discountAmount.toFixed(2)}</span>
+                    <span>-Rs. {selectedInvoice.discountAmount.toFixed(2)}</span>
                   </div>
                 )}
                 {selectedInvoice.cgstAmount > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">CGST</span>
-                    <span>${selectedInvoice.cgstAmount.toFixed(2)}</span>
+                    <span>Rs. {selectedInvoice.cgstAmount.toFixed(2)}</span>
                   </div>
                 )}
                 {selectedInvoice.sgstAmount > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">SGST</span>
-                    <span>${selectedInvoice.sgstAmount.toFixed(2)}</span>
+                    <span>Rs. {selectedInvoice.sgstAmount.toFixed(2)}</span>
                   </div>
                 )}
                 {selectedInvoice.gstAmount > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total Tax (GST)</span>
-                    <span>${selectedInvoice.gstAmount.toFixed(2)}</span>
+                    <span>Rs. {selectedInvoice.gstAmount.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-semibold text-lg">
                   <span>Total</span>
                   <span className="text-primary">
-                    ${selectedInvoice.totalAmount.toFixed(2)}
+                    Rs. {selectedInvoice.totalAmount.toFixed(2)}
                   </span>
                 </div>
               </div>

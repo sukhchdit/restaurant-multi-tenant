@@ -235,7 +235,7 @@ export const MenuManagement = () => {
                 {item.isVeg ? 'VEG' : 'NON-VEG'}
               </Badge>
             </div>
-            <p className="shrink-0 font-bold text-primary text-sm">${item.price.toFixed(2)}</p>
+            <p className="shrink-0 font-bold text-primary text-sm">Rs. {item.price.toFixed(2)}</p>
           </div>
 
           {/* Row 2: Description */}

@@ -157,14 +157,14 @@ const MenuItemSearch = ({
                       {item.discountedPrice != null && item.discountedPrice < item.price ? (
                         <>
                           <span className="text-xs text-muted-foreground line-through">
-                            ${item.price.toFixed(2)}
+                            Rs. {item.price.toFixed(2)}
                           </span>
                           <span className="text-green-600">
-                            ${item.discountedPrice.toFixed(2)}
+                            Rs. {item.discountedPrice.toFixed(2)}
                           </span>
                         </>
                       ) : (
-                        <span>${item.price.toFixed(2)}</span>
+                        <span>Rs. {item.price.toFixed(2)}</span>
                       )}
                     </div>
                   </button>
@@ -572,7 +572,7 @@ export const OrderManagement = () => {
               <span className="text-muted-foreground">
                 {item.quantity}x {item.menuItemName}
               </span>
-              <span className="font-medium">${item.totalPrice.toFixed(2)}</span>
+              <span className="font-medium">Rs. {item.totalPrice.toFixed(2)}</span>
             </div>
           ))}
         </div>
@@ -581,21 +581,21 @@ export const OrderManagement = () => {
         <div className="mt-4 space-y-1">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Subtotal</span>
-            <span>${order.subTotal.toFixed(2)}</span>
+            <span>Rs. {order.subTotal.toFixed(2)}</span>
           </div>
           {order.discountAmount > 0 && (
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Discount</span>
-              <span className="text-green-600">-${order.discountAmount.toFixed(2)}</span>
+              <span className="text-green-600">-Rs. {order.discountAmount.toFixed(2)}</span>
             </div>
           )}
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Tax</span>
-            <span>${order.taxAmount.toFixed(2)}</span>
+            <span>Rs. {order.taxAmount.toFixed(2)}</span>
           </div>
           <div className="flex justify-between font-bold">
             <span>Total</span>
-            <span className="text-red-600">${order.totalAmount.toFixed(2)}</span>
+            <span className="text-red-600">Rs. {order.totalAmount.toFixed(2)}</span>
           </div>
         </div>
       </CardContent>
@@ -979,7 +979,7 @@ export const OrderManagement = () => {
                   </div>
 
                   <span className="h-9 flex items-center text-sm font-semibold min-w-[60px]">
-                    ${(newOrderStagedItem.price * (newOrderIsHalf ? 1 : newOrderStagedQty)).toFixed(2)}
+                    Rs. {(newOrderStagedItem.price * (newOrderIsHalf ? 1 : newOrderStagedQty)).toFixed(2)}
                   </span>
 
                   <Button className="h-9 bg-green-600 hover:bg-green-700 text-white" onClick={confirmNewOrderStagedItem}>
@@ -1020,9 +1020,9 @@ export const OrderManagement = () => {
                           {item.name}
                           {item.isHalf && <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0">Half</Badge>}
                         </td>
-                        <td className="px-4 py-2 text-right">${item.price.toFixed(2)}</td>
+                        <td className="px-4 py-2 text-right">Rs. {item.price.toFixed(2)}</td>
                         <td className="px-4 py-2 text-center">{item.quantity}</td>
-                        <td className="px-4 py-2 text-right font-medium">${(item.price * item.quantity).toFixed(2)}</td>
+                        <td className="px-4 py-2 text-right font-medium">Rs. {(item.price * item.quantity).toFixed(2)}</td>
                         <td className="px-4 py-2 text-center">
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => deleteItemFromOrder(item.menuItemId)}>
                             <Trash2 className="h-4 w-4" />
@@ -1056,7 +1056,7 @@ export const OrderManagement = () => {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-medium">Total Amount</Label>
-                    <Input value={`$${subTotal.toFixed(2)}`} readOnly className="bg-muted" />
+                    <Input value={`Rs. ${subTotal.toFixed(2)}`} readOnly className="bg-muted" />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-medium">Discount %</Label>
@@ -1071,15 +1071,15 @@ export const OrderManagement = () => {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-medium">Discount Amt</Label>
-                    <Input value={`$${discountAmount.toFixed(2)}`} readOnly className="bg-muted" />
+                    <Input value={`Rs. ${discountAmount.toFixed(2)}`} readOnly className="bg-muted" />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-medium">Total</Label>
-                    <Input value={`$${taxableAmount.toFixed(2)}`} readOnly className="bg-muted" />
+                    <Input value={`Rs. ${taxableAmount.toFixed(2)}`} readOnly className="bg-muted" />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-medium">GST</Label>
-                    <Input value={`$${gstAmount.toFixed(2)}`} readOnly className="bg-muted" />
+                    <Input value={`Rs. ${gstAmount.toFixed(2)}`} readOnly className="bg-muted" />
                   </div>
                 </div>
 
@@ -1126,7 +1126,7 @@ export const OrderManagement = () => {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-medium">G.Total</Label>
-                    <Input value={`$${grandTotal.toFixed(2)}`} readOnly className="bg-muted font-bold" />
+                    <Input value={`Rs. ${grandTotal.toFixed(2)}`} readOnly className="bg-muted font-bold" />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-medium">VAT %</Label>
@@ -1271,14 +1271,14 @@ export const OrderManagement = () => {
                             <Plus className="h-3 w-3" />
                           </Button>
                           <span className="ml-2 w-16 text-right text-sm font-medium">
-                            ${(item.price * item.quantity).toFixed(2)}
+                            Rs. {(item.price * item.quantity).toFixed(2)}
                           </span>
                         </div>
                       </div>
                     ))}
                     <div className="border-t border-border pt-2 flex justify-between font-semibold">
                       <span>Subtotal</span>
-                      <span>${editItems.reduce((sum, i) => sum + i.price * i.quantity, 0).toFixed(2)}</span>
+                      <span>Rs. {editItems.reduce((sum, i) => sum + i.price * i.quantity, 0).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -1348,7 +1348,7 @@ export const OrderManagement = () => {
                       className="flex items-center justify-between rounded-lg bg-muted px-3 py-2"
                     >
                       <span className="font-medium">{item.quantity}x {item.menuItemName}</span>
-                      <span className="font-semibold">${item.totalPrice.toFixed(2)}</span>
+                      <span className="font-semibold">Rs. {item.totalPrice.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -1357,40 +1357,40 @@ export const OrderManagement = () => {
               <div className="space-y-2 border-t border-border pt-4">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span>${selectedOrder.subTotal.toFixed(2)}</span>
+                  <span>Rs. {selectedOrder.subTotal.toFixed(2)}</span>
                 </div>
                 {selectedOrder.discountAmount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Discount ({selectedOrder.discountPercentage}%)</span>
-                    <span>-${selectedOrder.discountAmount.toFixed(2)}</span>
+                    <span>-Rs. {selectedOrder.discountAmount.toFixed(2)}</span>
                   </div>
                 )}
                 {selectedOrder.gstAmount > 0 && (
                   <div className="flex justify-between">
                     <span>GST ({selectedOrder.gstPercentage}%)</span>
-                    <span>${selectedOrder.gstAmount.toFixed(2)}</span>
+                    <span>Rs. {selectedOrder.gstAmount.toFixed(2)}</span>
                   </div>
                 )}
                 {selectedOrder.vatAmount > 0 && (
                   <div className="flex justify-between">
                     <span>VAT ({selectedOrder.vatPercentage}%)</span>
-                    <span>${selectedOrder.vatAmount.toFixed(2)}</span>
+                    <span>Rs. {selectedOrder.vatAmount.toFixed(2)}</span>
                   </div>
                 )}
                 {selectedOrder.extraCharges > 0 && (
                   <div className="flex justify-between">
                     <span>Extra Charges</span>
-                    <span>${selectedOrder.extraCharges.toFixed(2)}</span>
+                    <span>Rs. {selectedOrder.extraCharges.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-semibold text-lg">
                   <span>Total</span>
-                  <span className="text-primary">${selectedOrder.totalAmount.toFixed(2)}</span>
+                  <span className="text-primary">Rs. {selectedOrder.totalAmount.toFixed(2)}</span>
                 </div>
                 {selectedOrder.paidAmount > 0 && (
                   <div className="flex justify-between text-sm">
                     <span>Paid</span>
-                    <span>${selectedOrder.paidAmount.toFixed(2)}</span>
+                    <span>Rs. {selectedOrder.paidAmount.toFixed(2)}</span>
                   </div>
                 )}
               </div>
