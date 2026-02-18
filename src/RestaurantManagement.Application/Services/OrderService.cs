@@ -374,10 +374,18 @@ public class OrderService : IOrderService
         }
 
         // Handle item changes
+        var newOrderItems = new List<OrderItem>();
         if (dto.Items != null)
         {
             if (dto.Items.Count == 0)
                 return ApiResponse<OrderDto>.Fail("Order must have at least one item.");
+
+            // Check if kitchen has started preparing — restrict item removal/reduction
+            var activeKot = await _kotRepository.Query()
+                .FirstOrDefaultAsync(k => k.OrderId == id && !k.IsDeleted
+                    && (k.Status == KOTStatus.Preparing || k.Status == KOTStatus.Ready), cancellationToken);
+
+            bool kitchenStarted = activeKot != null;
 
             // Fetch each menu item individually to avoid MySql.EntityFrameworkCore
             // provider bug with Guid[].Contains() in parameterized IN clauses
@@ -398,7 +406,29 @@ public class OrderService : IOrderService
             // Build lookup of desired items by MenuItemId
             var desiredByMenu = dto.Items.ToDictionary(i => i.MenuItemId);
 
-            // Remove items no longer in the list
+            // Validate: if kitchen started, cannot remove items or reduce quantities
+            if (kitchenStarted)
+            {
+                var removedItems = existingItems
+                    .Where(e => !desiredByMenu.ContainsKey(e.MenuItemId))
+                    .Select(e => e.MenuItemName)
+                    .ToList();
+
+                if (removedItems.Count > 0)
+                    return ApiResponse<OrderDto>.Fail(
+                        $"Cannot remove items while kitchen is preparing: {string.Join(", ", removedItems)}. Cancel the order instead.");
+
+                var reducedItems = existingItems
+                    .Where(e => desiredByMenu.TryGetValue(e.MenuItemId, out var d) && d.Quantity < e.Quantity)
+                    .Select(e => e.MenuItemName)
+                    .ToList();
+
+                if (reducedItems.Count > 0)
+                    return ApiResponse<OrderDto>.Fail(
+                        $"Cannot reduce quantity while kitchen is preparing: {string.Join(", ", reducedItems)}.");
+            }
+
+            // Remove items no longer in the list (only allowed when kitchen hasn't started)
             foreach (var existing in existingItems)
             {
                 if (!desiredByMenu.ContainsKey(existing.MenuItemId))
@@ -410,7 +440,6 @@ public class OrderService : IOrderService
             }
 
             // Update existing or add new items
-            var newOrderItems = new List<OrderItem>();
             foreach (var itemDto in dto.Items)
             {
                 var menuItem = menuItems.First(m => m.Id == itemDto.MenuItemId);
@@ -503,6 +532,58 @@ public class OrderService : IOrderService
         _orderRepository.Update(order);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        // Create new KOT for newly added items (previous KOTs remain unchanged)
+        if (dto.Items != null && newOrderItems.Count > 0)
+        {
+            var restaurantIdForKot = _currentUser.RestaurantId!.Value;
+
+            // Sequential KOT number
+            var lastKot = await _kotRepository.Query()
+                .Where(k => k.RestaurantId == restaurantIdForKot && EF.Functions.Like(k.KOTNumber, "KOT-%"))
+                .OrderByDescending(k => k.KOTNumber)
+                .Select(k => k.KOTNumber)
+                .FirstOrDefaultAsync(cancellationToken);
+            var nextKotSeq = 1;
+            if (lastKot != null && lastKot.StartsWith("KOT-") && int.TryParse(lastKot[4..], out var lastKotSeq))
+                nextKotSeq = lastKotSeq + 1;
+
+            string? tableNumber = null;
+            if (order.TableId.HasValue)
+            {
+                var table = await _tableRepository.GetByIdAsync(order.TableId.Value, cancellationToken);
+                tableNumber = table?.TableNumber;
+            }
+
+            var newKot = new KitchenOrderTicket
+            {
+                RestaurantId = restaurantIdForKot,
+                TenantId = order.TenantId,
+                OrderId = order.Id,
+                KOTNumber = $"KOT-{nextKotSeq:D4}",
+                TableNumber = tableNumber,
+                Status = KOTStatus.Sent,
+                Priority = 0,
+                SentAt = DateTime.UtcNow,
+                CreatedBy = _currentUser.UserId
+            };
+
+            await _kotRepository.AddAsync(newKot, cancellationToken);
+
+            var kotItems = newOrderItems.Select(oi => new KOTItem
+            {
+                KOTId = newKot.Id,
+                OrderItemId = oi.Id,
+                MenuItemName = oi.MenuItemName,
+                Quantity = oi.Quantity,
+                Notes = oi.Notes,
+                IsVeg = oi.IsVeg,
+                Status = KOTStatus.Sent
+            }).ToList();
+
+            await _kotItemRepository.AddRangeAsync(kotItems, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
         // Reload for correct mapping
         var updated = await _orderRepository.Query()
             .Include(o => o.OrderItems)
@@ -511,7 +592,10 @@ public class OrderService : IOrderService
             .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
 
         var result = _mapper.Map<OrderDto>(updated);
-        return ApiResponse<OrderDto>.Ok(result, "Order updated successfully.");
+        var message = newOrderItems.Count > 0
+            ? "Order updated. New KOT created."
+            : "Order updated successfully.";
+        return ApiResponse<OrderDto>.Ok(result, message);
     }
 
     public async Task<ApiResponse<OrderDto>> UpdateOrderStatusAsync(Guid id, UpdateOrderStatusDto dto, CancellationToken cancellationToken = default)

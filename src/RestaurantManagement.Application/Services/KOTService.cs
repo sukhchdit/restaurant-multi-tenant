@@ -40,10 +40,14 @@ public class KOTService : IKOTService
         if (restaurantId == null)
             return ApiResponse<List<KOTDto>>.Fail("Restaurant context not found.", 403);
 
+        var todayStart = DateTime.UtcNow.Date;
+        var tomorrowStart = todayStart.AddDays(1);
+
         var kots = await _kotRepository.Query()
             .Where(k => k.RestaurantId == restaurantId.Value && !k.IsDeleted
                         && (k.Status == KOTStatus.Sent || k.Status == KOTStatus.Acknowledged
-                            || k.Status == KOTStatus.Preparing || k.Status == KOTStatus.Ready))
+                            || k.Status == KOTStatus.Preparing || k.Status == KOTStatus.Ready)
+                        && k.CreatedAt >= todayStart && k.CreatedAt < tomorrowStart)
             .Include(k => k.KOTItems)
             .Include(k => k.Order)
             .Include(k => k.AssignedChef)

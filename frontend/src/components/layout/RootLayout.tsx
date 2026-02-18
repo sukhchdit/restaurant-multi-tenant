@@ -9,6 +9,7 @@ import { CommandPalette } from '@/components/keyboard/CommandPalette';
 import { HelpOverlay } from '@/components/keyboard/HelpOverlay';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
+import { useNotificationToast } from '@/hooks/useNotificationToast';
 
 export const RootLayout = () => {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
@@ -23,6 +24,7 @@ export const RootLayout = () => {
 
   useKeyboardShortcuts(globalShortcuts, { enableInInputs: true });
   useRealtimeSync();
+  useNotificationToast();
 
   // Navigation shortcuts (only outside inputs)
   const navShortcuts = useMemo(() => ({

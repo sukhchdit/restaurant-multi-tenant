@@ -16,11 +16,22 @@ public class PaymentController : ControllerBase
 {
     private readonly IPaymentService _paymentService;
     private readonly IHubContext<OrderHub> _orderHub;
+    private readonly IBillingService _billingService;
+    private readonly IAccountService _accountService;
+    private readonly ILogger<PaymentController> _logger;
 
-    public PaymentController(IPaymentService paymentService, IHubContext<OrderHub> orderHub)
+    public PaymentController(
+        IPaymentService paymentService,
+        IHubContext<OrderHub> orderHub,
+        IBillingService billingService,
+        IAccountService accountService,
+        ILogger<PaymentController> logger)
     {
         _paymentService = paymentService;
         _orderHub = orderHub;
+        _billingService = billingService;
+        _accountService = accountService;
+        _logger = logger;
     }
 
     private async Task BroadcastAsync(string eventName)
@@ -51,7 +62,38 @@ public class PaymentController : ControllerBase
     public async Task<IActionResult> ProcessPayment([FromBody] ProcessPaymentDto dto, CancellationToken cancellationToken)
     {
         var result = await _paymentService.ProcessPaymentAsync(dto, cancellationToken);
-        if (result.Success) await BroadcastAsync("PaymentUpdated");
+        if (result.Success)
+        {
+            await BroadcastAsync("PaymentUpdated");
+
+            try
+            {
+                // Auto-generate invoice for the order
+                var invoiceResult = await _billingService.GenerateInvoiceAsync(dto.OrderId, cancellationToken);
+                if (invoiceResult.Success)
+                {
+                    _logger.LogInformation("Auto-generated invoice for order {OrderId} on payment", dto.OrderId);
+                    await BroadcastAsync("BillingUpdated");
+                }
+                else
+                {
+                    _logger.LogWarning("Auto-invoice returned failure for order {OrderId}: {Message}", dto.OrderId, invoiceResult.Message);
+                }
+
+                // Auto-create revenue ledger entry
+                if (result.Data != null)
+                {
+                    await _accountService.CreateRevenueEntryAsync(
+                        dto.OrderId, dto.Amount, dto.PaymentMethod.ToString(),
+                        result.Data.OrderNumber ?? string.Empty, cancellationToken);
+                    _logger.LogInformation("Auto-created ledger entry for order {OrderId}", dto.OrderId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Auto-invoice/ledger failed for order {OrderId} on payment", dto.OrderId);
+            }
+        }
         return StatusCode(result.StatusCode, result);
     }
 
@@ -61,8 +103,40 @@ public class PaymentController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SplitPayment([FromBody] SplitPaymentDto dto, CancellationToken cancellationToken)
     {
+        var totalSplitAmount = dto.Splits.Sum(s => s.Amount);
         var result = await _paymentService.SplitPaymentAsync(dto, cancellationToken);
-        if (result.Success) await BroadcastAsync("PaymentUpdated");
+        if (result.Success)
+        {
+            await BroadcastAsync("PaymentUpdated");
+
+            try
+            {
+                // Auto-generate invoice for the order
+                var invoiceResult = await _billingService.GenerateInvoiceAsync(dto.OrderId, cancellationToken);
+                if (invoiceResult.Success)
+                {
+                    _logger.LogInformation("Auto-generated invoice for order {OrderId} on split payment", dto.OrderId);
+                    await BroadcastAsync("BillingUpdated");
+                }
+                else
+                {
+                    _logger.LogWarning("Auto-invoice returned failure for order {OrderId}: {Message}", dto.OrderId, invoiceResult.Message);
+                }
+
+                // Auto-create revenue ledger entry
+                if (result.Data != null)
+                {
+                    await _accountService.CreateRevenueEntryAsync(
+                        dto.OrderId, totalSplitAmount, "Split",
+                        result.Data.OrderNumber ?? string.Empty, cancellationToken);
+                    _logger.LogInformation("Auto-created ledger entry for order {OrderId} on split payment", dto.OrderId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Auto-invoice/ledger failed for order {OrderId} on split payment", dto.OrderId);
+            }
+        }
         return StatusCode(result.StatusCode, result);
     }
 

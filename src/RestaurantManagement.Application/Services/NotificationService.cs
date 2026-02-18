@@ -13,17 +13,20 @@ namespace RestaurantManagement.Application.Services;
 public class NotificationService : INotificationService
 {
     private readonly IRepository<Notification> _notificationRepository;
+    private readonly IRepository<User> _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IMapper _mapper;
 
     public NotificationService(
         IRepository<Notification> notificationRepository,
+        IRepository<User> userRepository,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         IMapper mapper)
     {
         _notificationRepository = notificationRepository;
+        _userRepository = userRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _mapper = mapper;
@@ -133,6 +136,48 @@ public class NotificationService : INotificationService
 
         var result = _mapper.Map<NotificationDto>(notification);
         return ApiResponse<NotificationDto>.Ok(result, "Notification created.");
+    }
+
+    public async Task<NotificationDto?> CreateForTenantUsersAsync(
+        string title, string message, NotificationType type,
+        Guid? referenceId = null, CancellationToken cancellationToken = default)
+    {
+        var tenantId = _currentUser.TenantId;
+        var currentUserId = _currentUser.UserId;
+        if (tenantId == null) return null;
+
+        var users = await _userRepository.QueryNoTracking()
+            .Where(u => u.TenantId == tenantId.Value && u.IsActive && !u.IsDeleted && u.Id != currentUserId)
+            .Select(u => u.Id)
+            .ToListAsync(cancellationToken);
+
+        if (users.Count == 0) return null;
+
+        var notifications = users.Select(userId => new Notification
+        {
+            UserId = userId,
+            TenantId = tenantId.Value,
+            Title = title,
+            Message = message,
+            Type = type,
+            ReferenceId = referenceId,
+            IsRead = false,
+            CreatedBy = currentUserId
+        }).ToList();
+
+        await _notificationRepository.AddRangeAsync(notifications, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new NotificationDto
+        {
+            Id = notifications[0].Id,
+            Title = title,
+            Message = message,
+            Type = type,
+            ReferenceId = referenceId,
+            IsRead = false,
+            CreatedAt = notifications[0].CreatedAt
+        };
     }
 
     public async Task<ApiResponse> DeleteAsync(Guid id, CancellationToken cancellationToken = default)

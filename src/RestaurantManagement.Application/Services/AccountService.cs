@@ -244,4 +244,33 @@ public class AccountService : IAccountService
 
         return ApiResponse<DailySettlementDto>.Ok(result, "Day settled successfully.");
     }
+
+    public async Task CreateRevenueEntryAsync(Guid orderId, decimal amount, string paymentMethod,
+        string orderNumber, CancellationToken ct = default)
+    {
+        var restaurantId = _currentUser.RestaurantId;
+        if (restaurantId == null) return;
+
+        // Prevent duplicate ledger entries for the same order
+        var exists = await _ledgerRepository.QueryNoTracking()
+            .AnyAsync(le => le.ReferenceId == orderId && !le.IsDeleted, ct);
+        if (exists) return;
+
+        var entry = new LedgerEntry
+        {
+            TenantId = _currentUser.TenantId ?? Guid.Empty,
+            RestaurantId = restaurantId.Value,
+            EntryDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            LedgerType = LedgerType.Income,
+            Category = "Sales Revenue",
+            Description = $"Payment for Order #{orderNumber}",
+            Amount = amount,
+            ReferenceId = orderId,
+            ReferenceType = paymentMethod,
+            CreatedBy = _currentUser.UserId
+        };
+
+        await _ledgerRepository.AddAsync(entry, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+    }
 }
