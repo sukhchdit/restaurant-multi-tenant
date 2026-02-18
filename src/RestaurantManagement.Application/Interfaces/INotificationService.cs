@@ -12,5 +12,6 @@ public interface INotificationService
     Task<ApiResponse> MarkAllAsReadAsync(CancellationToken cancellationToken = default);
     Task<ApiResponse<int>> GetUnreadCountAsync(CancellationToken cancellationToken = default);
     Task<ApiResponse<NotificationDto>> CreateAsync(Guid userId, string title, string message, NotificationType type, Guid? referenceId = null, CancellationToken cancellationToken = default);
+    Task<NotificationDto?> CreateForTenantUsersAsync(string title, string message, NotificationType type, Guid? referenceId = null, CancellationToken cancellationToken = default);
     Task<ApiResponse> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 }

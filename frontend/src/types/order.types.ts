@@ -94,6 +94,7 @@ export interface CreateOrderItemRequest {
 export interface KitchenOrderTicket {
   id: string;
   orderId: string;
+  orderNumber: string;
   kotNumber: string;
   tableNumber?: string;
   status: KOTStatus;

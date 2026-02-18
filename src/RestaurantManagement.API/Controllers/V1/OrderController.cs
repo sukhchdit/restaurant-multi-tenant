@@ -20,17 +20,29 @@ public class OrderController : ControllerBase
     private readonly ICurrentUserService _currentUser;
     private readonly IHubContext<OrderHub> _orderHub;
     private readonly IHubContext<KitchenHub> _kitchenHub;
+    private readonly INotificationService _notificationService;
+    private readonly IHubContext<NotificationHub> _notificationHub;
+    private readonly IBillingService _billingService;
+    private readonly ILogger<OrderController> _logger;
 
     public OrderController(
         IOrderService orderService,
         ICurrentUserService currentUser,
         IHubContext<OrderHub> orderHub,
-        IHubContext<KitchenHub> kitchenHub)
+        IHubContext<KitchenHub> kitchenHub,
+        INotificationService notificationService,
+        IHubContext<NotificationHub> notificationHub,
+        IBillingService billingService,
+        ILogger<OrderController> logger)
     {
         _orderService = orderService;
         _currentUser = currentUser;
         _orderHub = orderHub;
         _kitchenHub = kitchenHub;
+        _notificationService = notificationService;
+        _notificationHub = notificationHub;
+        _billingService = billingService;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -76,6 +88,28 @@ public class OrderController : ControllerBase
                     .SendAsync("OrderCreated", new { orderId = result.Data.Id });
                 await _kitchenHub.Clients.Group($"kitchen_{tenantId}")
                     .SendAsync("NewKOT", new { orderId = result.Data.Id });
+
+                var notification = await _notificationService.CreateForTenantUsersAsync(
+                    $"New Order #{result.Data.OrderNumber}",
+                    $"{result.Data.OrderType} - {result.Data.Items.Count} item(s)" +
+                        (result.Data.TableNumber != null ? $" - Table {result.Data.TableNumber}" : ""),
+                    NotificationType.OrderPlaced,
+                    result.Data.Id, cancellationToken);
+
+                if (notification != null)
+                {
+                    await _notificationHub.Clients.Group($"notifications_{tenantId}")
+                        .SendAsync("NewNotification", new
+                        {
+                            title = notification.Title,
+                            message = notification.Message,
+                            type = "order-placed",
+                            referenceId = notification.ReferenceId,
+                            createdBy = _currentUser.UserId
+                        });
+                    await _orderHub.Clients.Group($"tenant_{tenantId}")
+                        .SendAsync("NotificationUpdated", new { });
+                }
             }
         }
         return StatusCode(result.StatusCode, result);
@@ -96,8 +130,17 @@ public class OrderController : ControllerBase
             {
                 await _orderHub.Clients.Group($"tenant_{tenantId}")
                     .SendAsync("OrderUpdated", new { orderId = result.Data.Id });
-                await _kitchenHub.Clients.Group($"kitchen_{tenantId}")
-                    .SendAsync("KOTUpdated", new { orderId = result.Data.Id });
+
+                if (result.Message?.Contains("New KOT") == true)
+                {
+                    await _kitchenHub.Clients.Group($"kitchen_{tenantId}")
+                        .SendAsync("NewKOT", new { orderId = result.Data.Id });
+                }
+                else
+                {
+                    await _kitchenHub.Clients.Group($"kitchen_{tenantId}")
+                        .SendAsync("KOTUpdated", new { orderId = result.Data.Id });
+                }
             }
         }
         return StatusCode(result.StatusCode, result);
@@ -119,6 +162,29 @@ public class OrderController : ControllerBase
                     .SendAsync("OrderStatusChanged", new { orderId = result.Data.Id, status = result.Data.Status });
                 await _kitchenHub.Clients.Group($"kitchen_{tenantId}")
                     .SendAsync("KOTUpdated", new { orderId = result.Data.Id });
+
+                // Auto-generate invoice when order is served or completed
+                if (result.Data.Status == OrderStatus.Served || result.Data.Status == OrderStatus.Completed)
+                {
+                    try
+                    {
+                        var invoiceResult = await _billingService.GenerateInvoiceAsync(id, cancellationToken);
+                        if (invoiceResult.Success)
+                        {
+                            _logger.LogInformation("Auto-generated invoice for order {OrderId} on status {Status}", id, result.Data.Status);
+                            await _orderHub.Clients.Group($"tenant_{tenantId}")
+                                .SendAsync("BillingUpdated", new { });
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Auto-invoice returned failure for order {OrderId}: {Message}", id, invoiceResult.Message);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Auto-invoice failed for order {OrderId} on status {Status}", id, result.Data.Status);
+                    }
+                }
             }
         }
         return StatusCode(result.StatusCode, result);

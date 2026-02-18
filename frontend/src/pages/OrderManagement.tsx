@@ -340,8 +340,9 @@ export const OrderManagement = () => {
       setEditDialogOpen(false);
       setEditingOrder(null);
     },
-    onError: () => {
-      toast.error('Failed to update order');
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || 'Failed to update order';
+      toast.error(message);
     },
   });
 

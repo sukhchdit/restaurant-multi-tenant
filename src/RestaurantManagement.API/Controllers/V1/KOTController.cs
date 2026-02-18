@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.SignalR;
 using RestaurantManagement.API.Hubs;
 using RestaurantManagement.Application.DTOs.KOT;
 using RestaurantManagement.Application.Interfaces;
+using RestaurantManagement.Domain.Enums;
 using RestaurantManagement.Shared.Constants;
 using RestaurantManagement.Shared.Responses;
 
@@ -18,17 +19,23 @@ public class KOTController : ControllerBase
     private readonly ICurrentUserService _currentUser;
     private readonly IHubContext<KitchenHub> _kitchenHub;
     private readonly IHubContext<OrderHub> _orderHub;
+    private readonly INotificationService _notificationService;
+    private readonly IHubContext<NotificationHub> _notificationHub;
 
     public KOTController(
         IKOTService kotService,
         ICurrentUserService currentUser,
         IHubContext<KitchenHub> kitchenHub,
-        IHubContext<OrderHub> orderHub)
+        IHubContext<OrderHub> orderHub,
+        INotificationService notificationService,
+        IHubContext<NotificationHub> notificationHub)
     {
         _kotService = kotService;
         _currentUser = currentUser;
         _kitchenHub = kitchenHub;
         _orderHub = orderHub;
+        _notificationService = notificationService;
+        _notificationHub = notificationHub;
     }
 
     [HttpGet]
@@ -60,7 +67,13 @@ public class KOTController : ControllerBase
     {
         var result = await _kotService.StartPreparingAsync(id, cancellationToken);
         if (result.Success)
+        {
             await BroadcastKOTUpdate(result.Data!);
+            await BroadcastNotification(
+                $"KOT #{result.Data!.KOTNumber} Preparing",
+                $"Order #{result.Data.OrderNumber} is being prepared",
+                NotificationType.KOTCreated, result.Data.OrderId, cancellationToken);
+        }
         return StatusCode(result.StatusCode, result);
     }
 
@@ -72,7 +85,13 @@ public class KOTController : ControllerBase
     {
         var result = await _kotService.MarkReadyAsync(id, cancellationToken);
         if (result.Success)
+        {
             await BroadcastKOTUpdate(result.Data!);
+            await BroadcastNotification(
+                $"KOT #{result.Data!.KOTNumber} Ready!",
+                $"Order #{result.Data.OrderNumber} is ready for serving",
+                NotificationType.OrderReady, result.Data.OrderId, cancellationToken);
+        }
         return StatusCode(result.StatusCode, result);
     }
 
@@ -89,5 +108,36 @@ public class KOTController : ControllerBase
 
         await _orderHub.Clients.Group(orderGroup)
             .SendAsync("OrderStatusChanged", new { orderId = kot.OrderId, status = kot.Status });
+    }
+
+    private async Task BroadcastNotification(
+        string title, string message, NotificationType type, Guid? referenceId,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = _currentUser.TenantId;
+        if (tenantId == null) return;
+
+        var notification = await _notificationService.CreateForTenantUsersAsync(
+            title, message, type, referenceId, cancellationToken);
+
+        if (notification != null)
+        {
+            await _notificationHub.Clients.Group($"notifications_{tenantId}")
+                .SendAsync("NewNotification", new
+                {
+                    title = notification.Title,
+                    message = notification.Message,
+                    type = type switch
+                    {
+                        NotificationType.KOTCreated => "kot-created",
+                        NotificationType.OrderReady => "order-ready",
+                        _ => "system"
+                    },
+                    referenceId = notification.ReferenceId,
+                    createdBy = _currentUser.UserId
+                });
+            await _orderHub.Clients.Group($"tenant_{tenantId}")
+                .SendAsync("NotificationUpdated", new { });
+        }
     }
 }
