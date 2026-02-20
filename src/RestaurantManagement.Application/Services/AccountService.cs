@@ -245,6 +245,30 @@ public class AccountService : IAccountService
         return ApiResponse<DailySettlementDto>.Ok(result, "Day settled successfully.");
     }
 
+    public async Task CreateRefundEntryAsync(Guid orderId, decimal amount, string reason,
+        string orderNumber, CancellationToken ct = default)
+    {
+        var restaurantId = _currentUser.RestaurantId;
+        if (restaurantId == null) return;
+
+        var entry = new LedgerEntry
+        {
+            TenantId = _currentUser.TenantId ?? Guid.Empty,
+            RestaurantId = restaurantId.Value,
+            EntryDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            LedgerType = LedgerType.Expense,
+            Category = "Refund",
+            Description = $"Refund for Order #{orderNumber}" + (string.IsNullOrWhiteSpace(reason) ? "" : $" — {reason}"),
+            Amount = amount,
+            ReferenceId = orderId,
+            ReferenceType = "Refund",
+            CreatedBy = _currentUser.UserId
+        };
+
+        await _ledgerRepository.AddAsync(entry, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+    }
+
     public async Task CreateRevenueEntryAsync(Guid orderId, decimal amount, string paymentMethod,
         string orderNumber, CancellationToken ct = default)
     {

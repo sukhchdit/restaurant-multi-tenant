@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.SignalR;
 using RestaurantManagement.API.Hubs;
 using RestaurantManagement.Application.DTOs.Payment;
 using RestaurantManagement.Application.Interfaces;
+using RestaurantManagement.Domain.Interfaces;
+using RestaurantManagement.Domain.Entities;
 using RestaurantManagement.Shared.Constants;
 using RestaurantManagement.Shared.Responses;
 
@@ -18,6 +20,7 @@ public class PaymentController : ControllerBase
     private readonly IHubContext<OrderHub> _orderHub;
     private readonly IBillingService _billingService;
     private readonly IAccountService _accountService;
+    private readonly IRepository<Order> _orderRepository;
     private readonly ILogger<PaymentController> _logger;
 
     public PaymentController(
@@ -25,12 +28,14 @@ public class PaymentController : ControllerBase
         IHubContext<OrderHub> orderHub,
         IBillingService billingService,
         IAccountService accountService,
+        IRepository<Order> orderRepository,
         ILogger<PaymentController> logger)
     {
         _paymentService = paymentService;
         _orderHub = orderHub;
         _billingService = billingService;
         _accountService = accountService;
+        _orderRepository = orderRepository;
         _logger = logger;
     }
 
@@ -147,7 +152,28 @@ public class PaymentController : ControllerBase
     public async Task<IActionResult> ProcessRefund([FromBody] RefundDto dto, CancellationToken cancellationToken)
     {
         var result = await _paymentService.RefundAsync(dto, cancellationToken);
-        if (result.Success) await BroadcastAsync("PaymentUpdated");
+        if (result.Success)
+        {
+            await BroadcastAsync("PaymentUpdated");
+
+            try
+            {
+                if (result.Data != null)
+                {
+                    var order = await _orderRepository.GetByIdAsync(result.Data.OrderId, cancellationToken);
+                    var orderNumber = order?.OrderNumber ?? result.Data.OrderId.ToString()[..8];
+                    await _accountService.CreateRefundEntryAsync(
+                        result.Data.OrderId, result.Data.Amount, result.Data.Reason ?? string.Empty,
+                        orderNumber, cancellationToken);
+                    _logger.LogInformation("Created refund ledger entry for order {OrderId}", result.Data.OrderId);
+                    await BroadcastAsync("AccountsUpdated");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create refund ledger entry for payment {PaymentId}", dto.PaymentId);
+            }
+        }
         return StatusCode(result.StatusCode, result);
     }
 
@@ -164,7 +190,28 @@ public class PaymentController : ControllerBase
             Reason = dto.Reason
         };
         var result = await _paymentService.RefundAsync(refundDto, cancellationToken);
-        if (result.Success) await BroadcastAsync("PaymentUpdated");
+        if (result.Success)
+        {
+            await BroadcastAsync("PaymentUpdated");
+
+            try
+            {
+                if (result.Data != null)
+                {
+                    var order = await _orderRepository.GetByIdAsync(result.Data.OrderId, cancellationToken);
+                    var orderNumber = order?.OrderNumber ?? result.Data.OrderId.ToString()[..8];
+                    await _accountService.CreateRefundEntryAsync(
+                        result.Data.OrderId, result.Data.Amount, result.Data.Reason ?? string.Empty,
+                        orderNumber, cancellationToken);
+                    _logger.LogInformation("Created refund ledger entry for order {OrderId}", result.Data.OrderId);
+                    await BroadcastAsync("AccountsUpdated");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create refund ledger entry for payment {PaymentId}", paymentId);
+            }
+        }
         return StatusCode(result.StatusCode, result);
     }
 }

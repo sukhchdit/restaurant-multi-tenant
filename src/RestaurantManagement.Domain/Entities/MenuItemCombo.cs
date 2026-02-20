@@ -8,6 +8,8 @@ public class MenuItemCombo : TenantEntity
     public decimal ComboPrice { get; set; }
     public string? ImageUrl { get; set; }
     public bool IsAvailable { get; set; } = true;
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
 
     // Navigation properties
     public virtual Restaurant Restaurant { get; set; } = null!;

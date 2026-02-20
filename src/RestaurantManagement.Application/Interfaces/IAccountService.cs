@@ -10,4 +10,5 @@ public interface IAccountService
     Task<ApiResponse<List<DailySettlementDto>>> GetSettlementsAsync(CancellationToken cancellationToken = default);
     Task<ApiResponse<DailySettlementDto>> SettleDayAsync(string date, CancellationToken cancellationToken = default);
     Task CreateRevenueEntryAsync(Guid orderId, decimal amount, string paymentMethod, string orderNumber, CancellationToken ct = default);
+    Task CreateRefundEntryAsync(Guid orderId, decimal amount, string reason, string orderNumber, CancellationToken ct = default);
 }

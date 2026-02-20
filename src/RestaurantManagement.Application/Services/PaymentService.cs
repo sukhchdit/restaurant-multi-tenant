@@ -16,6 +16,7 @@ public class PaymentService : IPaymentService
     private readonly IRepository<PaymentSplit> _paymentSplitRepository;
     private readonly IRepository<Order> _orderRepository;
     private readonly IRepository<Refund> _refundRepository;
+    private readonly IRepository<Invoice> _invoiceRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IMapper _mapper;
@@ -25,6 +26,7 @@ public class PaymentService : IPaymentService
         IRepository<PaymentSplit> paymentSplitRepository,
         IRepository<Order> orderRepository,
         IRepository<Refund> refundRepository,
+        IRepository<Invoice> invoiceRepository,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         IMapper mapper)
@@ -33,6 +35,7 @@ public class PaymentService : IPaymentService
         _paymentSplitRepository = paymentSplitRepository;
         _orderRepository = orderRepository;
         _refundRepository = refundRepository;
+        _invoiceRepository = invoiceRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _mapper = mapper;
@@ -83,6 +86,9 @@ public class PaymentService : IPaymentService
         order.UpdatedAt = DateTime.UtcNow;
         order.UpdatedBy = _currentUser.UserId;
         _orderRepository.Update(order);
+
+        // Sync invoice payment status
+        await SyncInvoicePaymentStatusAsync(dto.OrderId, order.PaymentStatus, dto.PaymentMethod, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -152,6 +158,9 @@ public class PaymentService : IPaymentService
             order.UpdatedBy = _currentUser.UserId;
             _orderRepository.Update(order);
 
+            // Sync invoice payment status
+            await SyncInvoicePaymentStatusAsync(dto.OrderId, order.PaymentStatus, null, cancellationToken);
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await _unitOfWork.CommitAsync(cancellationToken);
 
@@ -209,6 +218,9 @@ public class PaymentService : IPaymentService
         {
             payment.Order.PaymentStatus = PaymentStatus.Refunded;
             _orderRepository.Update(payment.Order);
+
+            // Sync invoice payment status
+            await SyncInvoicePaymentStatusAsync(payment.OrderId, PaymentStatus.Refunded, null, cancellationToken);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -263,5 +275,21 @@ public class PaymentService : IPaymentService
         var result = new PaginatedResultDto<PaymentDto>(dtos, totalCount, pageNumber, pageSize);
 
         return ApiResponse<PaginatedResultDto<PaymentDto>>.Ok(result);
+    }
+
+    private async Task SyncInvoicePaymentStatusAsync(Guid orderId, PaymentStatus status, PaymentMethod? paymentMethod, CancellationToken cancellationToken)
+    {
+        var invoice = await _invoiceRepository.Query()
+            .FirstOrDefaultAsync(i => i.OrderId == orderId && !i.IsDeleted, cancellationToken);
+
+        if (invoice != null)
+        {
+            invoice.PaymentStatus = status;
+            if (paymentMethod.HasValue)
+                invoice.PaymentMethod = paymentMethod.Value;
+            invoice.UpdatedAt = DateTime.UtcNow;
+            invoice.UpdatedBy = _currentUser.UserId;
+            _invoiceRepository.Update(invoice);
+        }
     }
 }

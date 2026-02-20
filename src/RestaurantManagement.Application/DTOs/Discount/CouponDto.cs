@@ -15,3 +15,13 @@ public class CouponDto
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
 }
+
+public class CreateCouponDto
+{
+    public string Code { get; set; } = string.Empty;
+    public Guid DiscountId { get; set; }
+    public int MaxUsageCount { get; set; } = 100;
+    public int? MaxPerCustomer { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+}

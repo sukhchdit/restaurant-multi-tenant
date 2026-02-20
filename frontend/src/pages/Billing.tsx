@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
@@ -13,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import {
   Table,
   TableBody,
@@ -29,9 +31,11 @@ import {
   FileText,
   DollarSign,
   Plus,
+  CreditCard,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ApiResponse, PaginatedResult } from '@/types/api.types';
+import type { PaymentMethod, ProcessPaymentRequest } from '@/types/payment.types';
 
 interface InvoiceLineItem {
   id: string;
@@ -55,6 +59,8 @@ interface Invoice {
   cgstAmount: number;
   sgstAmount: number;
   gstAmount: number;
+  vatAmount: number;
+  extraCharges: number;
   totalAmount: number;
   paymentMethod?: string;
   paymentStatus: string;
@@ -79,12 +85,24 @@ const billingApi = {
     });
     return response.data;
   },
+  processPayment: async (data: ProcessPaymentRequest): Promise<ApiResponse<unknown>> => {
+    const response = await axiosInstance.post('/payments', data);
+    return response.data;
+  },
 };
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
   paid: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  partial: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  'partially-paid': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  refunded: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+};
+
+const statusLabel: Record<string, string> = {
+  pending: 'Pending',
+  paid: 'Paid',
+  'partially-paid': 'Partially Paid',
+  refunded: 'Refunded',
 };
 
 export const Billing = () => {
@@ -93,6 +111,11 @@ export const Billing = () => {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
   const [generateOrderId, setGenerateOrderId] = useState('');
+  const [payDialogOpen, setPayDialogOpen] = useState(false);
+  const [payInvoice, setPayInvoice] = useState<Invoice | null>(null);
+  const [payAmount, setPayAmount] = useState('');
+  const [payMethod, setPayMethod] = useState<PaymentMethod>('cash');
+  const [payTransactionId, setPayTransactionId] = useState('');
   const queryClient = useQueryClient();
 
   const { data: invoicesResponse, isLoading } = useQuery({
@@ -109,6 +132,17 @@ export const Billing = () => {
       setGenerateOrderId('');
     },
     onError: () => toast.error('Failed to generate invoice'),
+  });
+
+  const processPaymentMutation = useMutation({
+    mutationFn: (data: ProcessPaymentRequest) => billingApi.processPayment(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      toast.success('Payment recorded successfully');
+      closePayDialog();
+    },
+    onError: () => toast.error('Failed to process payment'),
   });
 
   const invoices = invoicesResponse?.data?.items ?? [];
@@ -135,6 +169,35 @@ export const Billing = () => {
     setSelectedInvoice(invoice);
     setViewDialogOpen(true);
   };
+
+  const openPayDialog = (invoice: Invoice) => {
+    setPayInvoice(invoice);
+    setPayAmount(invoice.totalAmount.toFixed(2));
+    setPayMethod('cash');
+    setPayTransactionId('');
+    setPayDialogOpen(true);
+  };
+
+  const closePayDialog = () => {
+    setPayDialogOpen(false);
+    setPayInvoice(null);
+    setPayAmount('');
+    setPayMethod('cash');
+    setPayTransactionId('');
+  };
+
+  const handleRecordPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payInvoice) return;
+    processPaymentMutation.mutate({
+      orderId: payInvoice.orderId,
+      amount: parseFloat(payAmount),
+      paymentMethod: payMethod,
+      transactionId: payTransactionId || undefined,
+    });
+  };
+
+  const isUnpaid = (status: string) => status === 'pending' || status === 'partially-paid';
 
   if (isLoading) {
     return (
@@ -259,7 +322,7 @@ export const Billing = () => {
                   </TableCell>
                   <TableCell>
                     <Badge className={statusColors[invoice.paymentStatus]}>
-                      {invoice.paymentStatus}
+                      {statusLabel[invoice.paymentStatus] || invoice.paymentStatus}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -271,6 +334,7 @@ export const Billing = () => {
                         variant="ghost"
                         size="icon"
                         onClick={() => viewInvoice(invoice)}
+                        title="View invoice"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -278,9 +342,21 @@ export const Billing = () => {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDownloadPdf(invoice)}
+                        title="Download PDF"
                       >
                         <Download className="h-4 w-4" />
                       </Button>
+                      {isUnpaid(invoice.paymentStatus) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openPayDialog(invoice)}
+                          title="Record payment"
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                        >
+                          <CreditCard className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -326,7 +402,7 @@ export const Billing = () => {
                 <div>
                   <p className="text-sm text-muted-foreground">Status</p>
                   <Badge className={statusColors[selectedInvoice.paymentStatus]}>
-                    {selectedInvoice.paymentStatus}
+                    {statusLabel[selectedInvoice.paymentStatus] || selectedInvoice.paymentStatus}
                   </Badge>
                 </div>
               </div>
@@ -380,6 +456,18 @@ export const Billing = () => {
                     <span>Rs. {selectedInvoice.gstAmount.toFixed(2)}</span>
                   </div>
                 )}
+                {selectedInvoice.vatAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">VAT</span>
+                    <span>Rs. {selectedInvoice.vatAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                {selectedInvoice.extraCharges > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Extra Charges</span>
+                    <span>Rs. {selectedInvoice.extraCharges.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-semibold text-lg">
                   <span>Total</span>
                   <span className="text-primary">
@@ -388,14 +476,112 @@ export const Billing = () => {
                 </div>
               </div>
 
-              <Button
-                className="w-full"
-                onClick={() => handleDownloadPdf(selectedInvoice)}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download PDF
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => handleDownloadPdf(selectedInvoice)}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download PDF
+                </Button>
+                {isUnpaid(selectedInvoice.paymentStatus) && (
+                  <Button
+                    className="flex-1"
+                    onClick={() => {
+                      setViewDialogOpen(false);
+                      openPayDialog(selectedInvoice);
+                    }}
+                  >
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Record Payment
+                  </Button>
+                )}
+              </div>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Record Payment Dialog */}
+      <Dialog open={payDialogOpen} onOpenChange={(open) => { if (!open) closePayDialog(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription>
+              {payInvoice
+                ? `Process payment for Invoice #${payInvoice.invoiceNumber}`
+                : 'Process payment'}
+            </DialogDescription>
+          </DialogHeader>
+          {payInvoice && (
+            <form onSubmit={handleRecordPayment} className="space-y-4">
+              <div className="rounded-lg bg-muted p-3 space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Invoice</span>
+                  <span className="font-mono font-medium">{payInvoice.invoiceNumber}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Customer</span>
+                  <span className="font-medium">{payInvoice.customerName || 'Guest'}</span>
+                </div>
+                <div className="flex justify-between text-sm font-semibold">
+                  <span>Invoice Total</span>
+                  <span>Rs. {payInvoice.totalAmount.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="pay-amount">Amount (Rs.)</Label>
+                <Input
+                  id="pay-amount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={payAmount}
+                  onChange={(e) => setPayAmount(e.target.value)}
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="pay-method">Payment Method</Label>
+                <SearchableSelect
+                  value={payMethod}
+                  onValueChange={(v) => setPayMethod(v as PaymentMethod)}
+                  options={[
+                    { value: 'cash', label: 'Cash' },
+                    { value: 'card', label: 'Card' },
+                    { value: 'upi', label: 'UPI' },
+                    { value: 'online', label: 'Online' },
+                    { value: 'wallet', label: 'Wallet' },
+                  ]}
+                  placeholder="Select payment method"
+                />
+              </div>
+
+              {payMethod !== 'cash' && (
+                <div className="space-y-2">
+                  <Label htmlFor="pay-txn-id">Transaction ID</Label>
+                  <Input
+                    id="pay-txn-id"
+                    value={payTransactionId}
+                    onChange={(e) => setPayTransactionId(e.target.value)}
+                    placeholder="Enter transaction reference"
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="outline" onClick={closePayDialog}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={processPaymentMutation.isPending}>
+                  {processPaymentMutation.isPending ? 'Processing...' : 'Record Payment'}
+                </Button>
+              </div>
+            </form>
           )}
         </DialogContent>
       </Dialog>

@@ -16,6 +16,8 @@ public class InvoiceDto
     public decimal CgstAmount { get; set; }
     public decimal SgstAmount { get; set; }
     public decimal GstAmount { get; set; }
+    public decimal VatAmount { get; set; }
+    public decimal ExtraCharges { get; set; }
     public decimal TotalAmount { get; set; }
     public PaymentMethod? PaymentMethod { get; set; }
     public PaymentStatus PaymentStatus { get; set; }

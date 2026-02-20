@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using RestaurantManagement.Application.DTOs.Common;
 using RestaurantManagement.Application.DTOs.Order;
 using RestaurantManagement.Application.DTOs.Report;
@@ -24,9 +25,12 @@ public class OrderService : IOrderService
     private readonly IRepository<StockMovement> _stockMovementRepository;
     private readonly IRepository<TaxConfiguration> _taxConfigRepository;
     private readonly IRepository<Discount> _discountRepository;
+    private readonly IRepository<Coupon> _couponRepository;
+    private readonly IRepository<CouponUsage> _couponUsageRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IMapper _mapper;
+    private readonly ILogger<OrderService> _logger;
 
     public OrderService(
         IRepository<Order> orderRepository,
@@ -40,9 +44,12 @@ public class OrderService : IOrderService
         IRepository<StockMovement> stockMovementRepository,
         IRepository<TaxConfiguration> taxConfigRepository,
         IRepository<Discount> discountRepository,
+        IRepository<Coupon> couponRepository,
+        IRepository<CouponUsage> couponUsageRepository,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
-        IMapper mapper)
+        IMapper mapper,
+        ILogger<OrderService> logger)
     {
         _orderRepository = orderRepository;
         _orderItemRepository = orderItemRepository;
@@ -55,9 +62,12 @@ public class OrderService : IOrderService
         _stockMovementRepository = stockMovementRepository;
         _taxConfigRepository = taxConfigRepository;
         _discountRepository = discountRepository;
+        _couponRepository = couponRepository;
+        _couponUsageRepository = couponUsageRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _mapper = mapper;
+        _logger = logger;
     }
 
     public async Task<ApiResponse<PaginatedResultDto<OrderDto>>> GetOrdersAsync(
@@ -151,7 +161,9 @@ public class OrderService : IOrderService
             // Sequential order number: ORD-0001, ORD-0002, ...
             // Use EF.Functions.Like instead of StartsWith — MySql.EntityFrameworkCore
             // crashes on StartsWith with "COLLATE utf8mb4_bin type mapping" error
+            // IgnoreQueryFilters: include soft-deleted orders to avoid unique constraint violation
             var lastOrder = await _orderRepository.Query()
+                .IgnoreQueryFilters()
                 .Where(o => o.RestaurantId == restaurantId.Value && EF.Functions.Like(o.OrderNumber, "ORD-%"))
                 .OrderByDescending(o => o.OrderNumber)
                 .Select(o => o.OrderNumber)
@@ -239,7 +251,9 @@ public class OrderService : IOrderService
 
             // Auto-create KOT
             // Sequential KOT number: KOT-0001, KOT-0002, ...
+            // IgnoreQueryFilters: include soft-deleted KOTs to avoid unique constraint violation
             var lastKot = await _kotRepository.Query()
+                .IgnoreQueryFilters()
                 .Where(k => k.RestaurantId == restaurantId.Value && EF.Functions.Like(k.KOTNumber, "KOT-%"))
                 .OrderByDescending(k => k.KOTNumber)
                 .Select(k => k.KOTNumber)
@@ -289,6 +303,29 @@ public class OrderService : IOrderService
             }).ToList();
 
             await _kotItemRepository.AddRangeAsync(kotItems, cancellationToken);
+
+            // Track coupon usage if discount is applied
+            if (order.DiscountId != null && order.DiscountAmount > 0)
+            {
+                var coupon = await _couponRepository.Query()
+                    .FirstOrDefaultAsync(c => c.DiscountId == order.DiscountId.Value && c.IsActive && !c.IsDeleted, cancellationToken);
+
+                if (coupon != null)
+                {
+                    var couponUsage = new CouponUsage
+                    {
+                        CouponId = coupon.Id,
+                        OrderId = order.Id,
+                        CustomerId = order.CustomerId,
+                        DiscountAmount = order.DiscountAmount,
+                        UsedAt = DateTime.UtcNow
+                    };
+
+                    await _couponUsageRepository.AddAsync(couponUsage, cancellationToken);
+                    coupon.UsedCount++;
+                    _couponRepository.Update(coupon);
+                }
+            }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await _unitOfWork.CommitAsync(cancellationToken);
@@ -538,7 +575,9 @@ public class OrderService : IOrderService
             var restaurantIdForKot = _currentUser.RestaurantId!.Value;
 
             // Sequential KOT number
+            // IgnoreQueryFilters: include soft-deleted KOTs to avoid unique constraint violation
             var lastKot = await _kotRepository.Query()
+                .IgnoreQueryFilters()
                 .Where(k => k.RestaurantId == restaurantIdForKot && EF.Functions.Like(k.KOTNumber, "KOT-%"))
                 .OrderByDescending(k => k.KOTNumber)
                 .Select(k => k.KOTNumber)
@@ -630,6 +669,7 @@ public class OrderService : IOrderService
         // Auto stock deduction when entering Confirmed, or Preparing directly from Pending
         if (dto.Status == OrderStatus.Confirmed || (dto.Status == OrderStatus.Preparing && previousStatus == OrderStatus.Pending))
         {
+            await ValidateStockForOrderAsync(order, cancellationToken);
             await DeductStockForOrderAsync(order, cancellationToken);
         }
 
@@ -760,6 +800,40 @@ public class OrderService : IOrderService
         };
 
         return ApiResponse<DashboardStatsDto>.Ok(stats);
+    }
+
+    private async Task ValidateStockForOrderAsync(Order order, CancellationToken cancellationToken)
+    {
+        var orderItems = await _orderItemRepository.FindAsync(
+            oi => oi.OrderId == order.Id, cancellationToken);
+
+        foreach (var orderItem in orderItems)
+        {
+            var ingredients = await _dishIngredientRepository.FindAsync(
+                di => di.MenuItemId == orderItem.MenuItemId, cancellationToken);
+
+            foreach (var ingredient in ingredients)
+            {
+                var inventoryItem = await _inventoryItemRepository.GetByIdAsync(ingredient.InventoryItemId, cancellationToken);
+                if (inventoryItem == null) continue;
+
+                var totalRequired = ingredient.QuantityRequired * orderItem.Quantity;
+                if (inventoryItem.CurrentStock < totalRequired)
+                {
+                    _logger.LogWarning(
+                        "Insufficient stock for order {OrderNumber}: {ItemName} requires {Required} {Unit} of {IngredientName} but only {Available} available",
+                        order.OrderNumber, orderItem.MenuItemName, totalRequired, inventoryItem.Unit,
+                        inventoryItem.Name, inventoryItem.CurrentStock);
+                }
+                else if (inventoryItem.CurrentStock - totalRequired <= inventoryItem.MinStock)
+                {
+                    _logger.LogWarning(
+                        "Low stock warning for order {OrderNumber}: {IngredientName} will drop to {Remaining} {Unit} (min: {MinStock}) after deduction",
+                        order.OrderNumber, inventoryItem.Name,
+                        inventoryItem.CurrentStock - totalRequired, inventoryItem.Unit, inventoryItem.MinStock);
+                }
+            }
+        }
     }
 
     private async Task DeductStockForOrderAsync(Order order, CancellationToken cancellationToken)

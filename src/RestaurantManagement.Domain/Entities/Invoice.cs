@@ -15,6 +15,8 @@ public class Invoice : TenantEntity
     public decimal CgstAmount { get; set; } = 0;
     public decimal SgstAmount { get; set; } = 0;
     public decimal GstAmount { get; set; } = 0;
+    public decimal VatAmount { get; set; } = 0;
+    public decimal ExtraCharges { get; set; } = 0;
     public decimal TotalAmount { get; set; }
     public PaymentMethod? PaymentMethod { get; set; }
     public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Pending;

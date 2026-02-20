@@ -20,6 +20,7 @@ import {
   ClipboardList,
   ChevronLeft,
   ChevronRight,
+  Layers,
 } from 'lucide-react';
 import { cn } from '@/components/ui/utils';
 
@@ -40,6 +41,12 @@ const navItems: NavItem[] = [
     name: 'Menu',
     path: '/menu',
     icon: UtensilsCrossed,
+    roles: ['SuperAdmin', 'RestaurantAdmin', 'Manager'],
+  },
+  {
+    name: 'Combos',
+    path: '/combos',
+    icon: Layers,
     roles: ['SuperAdmin', 'RestaurantAdmin', 'Manager'],
   },
   {
