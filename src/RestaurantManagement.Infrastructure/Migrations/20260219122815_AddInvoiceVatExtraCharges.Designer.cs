@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RestaurantManagement.Infrastructure.DbContext;
 
@@ -10,9 +11,11 @@ using RestaurantManagement.Infrastructure.DbContext;
 namespace RestaurantManagement.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260219122815_AddInvoiceVatExtraCharges")]
+    partial class AddInvoiceVatExtraCharges
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1921,9 +1924,6 @@ namespace RestaurantManagement.Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("varchar(1000)");
 
-                    b.Property<DateTime?>("EndDate")
-                        .HasColumnType("datetime(6)");
-
                     b.Property<string>("ImageUrl")
                         .HasMaxLength(500)
                         .HasColumnType("varchar(500)");
@@ -1943,9 +1943,6 @@ namespace RestaurantManagement.Infrastructure.Migrations
 
                     b.Property<Guid>("RestaurantId")
                         .HasColumnType("char(36)");
-
-                    b.Property<DateTime?>("StartDate")
-                        .HasColumnType("datetime(6)");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("char(36)");
@@ -2681,9 +2678,6 @@ namespace RestaurantManagement.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
-
-                    b.Property<string>("Address")
-                        .HasColumnType("longtext");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");

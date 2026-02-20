@@ -5,6 +5,16 @@ namespace RestaurantManagement.Application.Interfaces;
 public class SettingsDto
 {
     public Guid Id { get; set; }
+
+    // Restaurant info
+    public string RestaurantName { get; set; } = string.Empty;
+    public string? Phone { get; set; }
+    public string? Email { get; set; }
+    public string? Address { get; set; }
+    public string? GstNumber { get; set; }
+    public string? FssaiNumber { get; set; }
+
+    // Tenant settings
     public string Currency { get; set; } = "INR";
     public decimal TaxRate { get; set; }
     public string TimeZone { get; set; } = "Asia/Kolkata";
@@ -15,6 +25,15 @@ public class SettingsDto
 
 public class UpdateSettingsDto
 {
+    // Restaurant info
+    public string? RestaurantName { get; set; }
+    public string? Phone { get; set; }
+    public string? Email { get; set; }
+    public string? Address { get; set; }
+    public string? GstNumber { get; set; }
+    public string? FssaiNumber { get; set; }
+
+    // Tenant settings
     public string? Currency { get; set; }
     public decimal? TaxRate { get; set; }
     public string? TimeZone { get; set; }

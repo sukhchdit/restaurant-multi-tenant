@@ -30,32 +30,38 @@ import {
   Shield,
   User,
   Clock,
+  ChevronsLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsRight,
 } from 'lucide-react';
 import type { ApiResponse, PaginatedResult } from '@/types/api.types';
 
 interface AuditLog {
   id: string;
   action: string;
-  entity: string;
-  entityId: string;
-  userId: string;
-  userName: string;
-  userRole: string;
-  details?: string;
+  entityType: string;
+  entityId?: string;
+  userId?: string;
+  userEmail?: string;
+  description?: string;
   ipAddress?: string;
-  oldValues?: Record<string, unknown>;
-  newValues?: Record<string, unknown>;
+  oldValues?: string;
+  newValues?: string;
   createdAt: string;
 }
+
+const PAGE_SIZE = 25;
 
 const auditApi = {
   getLogs: async (params?: {
     action?: string;
-    entity?: string;
+    entityType?: string;
     userId?: string;
-    dateFrom?: string;
-    dateTo?: string;
-    search?: string;
+    fromDate?: string;
+    toDate?: string;
+    pageNumber?: number;
+    pageSize?: number;
   }): Promise<ApiResponse<PaginatedResult<AuditLog>>> => {
     const response = await axiosInstance.get('/audit-logs', { params });
     return response.data;
@@ -75,23 +81,27 @@ export const AuditLogs = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState<string>('all');
   const [entityFilter, setEntityFilter] = useState<string>('all');
+  const [pageNumber, setPageNumber] = useState(1);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   const { data: logsResponse, isLoading } = useQuery({
-    queryKey: ['auditLogs', searchTerm, actionFilter, entityFilter],
+    queryKey: ['auditLogs', searchTerm, actionFilter, entityFilter, pageNumber],
     queryFn: () =>
       auditApi.getLogs({
-        search: searchTerm || undefined,
         action: actionFilter !== 'all' ? actionFilter : undefined,
-        entity: entityFilter !== 'all' ? entityFilter : undefined,
+        entityType: entityFilter !== 'all' ? entityFilter : undefined,
+        pageNumber,
+        pageSize: PAGE_SIZE,
       }),
   });
 
   const logs = logsResponse?.data?.items ?? [];
+  const totalCount = logsResponse?.data?.totalCount ?? 0;
+  const totalPages = logsResponse?.data?.totalPages ?? 1;
 
-  const entities = Array.from(new Set(logs.map((l) => l.entity)));
-  const actions = Array.from(new Set(logs.map((l) => l.action)));
+  const entities = Array.from(new Set(logs.map((l) => l.entityType).filter(Boolean)));
+  const actions = Array.from(new Set(logs.map((l) => l.action).filter(Boolean)));
 
   const viewLog = (log: AuditLog) => {
     setSelectedLog(log);
@@ -140,7 +150,7 @@ export const AuditLogs = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Logs</p>
-                <p className="text-2xl font-bold">{logs.length}</p>
+                <p className="text-2xl font-bold">{totalCount}</p>
               </div>
             </div>
           </CardContent>
@@ -193,10 +203,10 @@ export const AuditLogs = () => {
           <Filter className="h-4 w-4 text-muted-foreground" />
           <SearchableSelect
             value={actionFilter}
-            onValueChange={setActionFilter}
+            onValueChange={(v) => { setActionFilter(v); setPageNumber(1); }}
             options={actions.map((action) => ({
               value: action,
-              label: action.replace('_', ' '),
+              label: action.replace(/_/g, ' '),
             }))}
             pinnedOptions={[{ value: 'all', label: 'All Actions' }]}
             placeholder="Filter by action"
@@ -205,7 +215,7 @@ export const AuditLogs = () => {
 
         <SearchableSelect
           value={entityFilter}
-          onValueChange={setEntityFilter}
+          onValueChange={(v) => { setEntityFilter(v); setPageNumber(1); }}
           options={entities.map((entity) => ({
             value: entity,
             label: entity,
@@ -229,7 +239,7 @@ export const AuditLogs = () => {
                 <TableHead>Action</TableHead>
                 <TableHead>Entity</TableHead>
                 <TableHead>Entity ID</TableHead>
-                <TableHead>Details</TableHead>
+                <TableHead>Description</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -245,12 +255,7 @@ export const AuditLogs = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div>
-                      <p className="font-medium">{log.userName}</p>
-                      <p className="text-xs text-muted-foreground capitalize">
-                        {log.userRole.replace('_', ' ')}
-                      </p>
-                    </div>
+                    <p className="font-medium text-sm">{log.userEmail || '-'}</p>
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -259,17 +264,17 @@ export const AuditLogs = () => {
                         'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
                       }
                     >
-                      {log.action.replace('_', ' ')}
+                      {(log.action || '').replace(/_/g, ' ')}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{log.entity}</Badge>
+                    <Badge variant="outline">{log.entityType}</Badge>
                   </TableCell>
                   <TableCell className="font-mono text-xs">
-                    {log.entityId.slice(0, 8)}...
+                    {log.entityId ? `${log.entityId.slice(0, 8)}...` : '-'}
                   </TableCell>
                   <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
-                    {log.details || '-'}
+                    {log.description || '-'}
                   </TableCell>
                   <TableCell>
                     <Button
@@ -294,6 +299,31 @@ export const AuditLogs = () => {
               )}
             </TableBody>
           </Table>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-border pt-4 mt-4">
+              <p className="text-sm text-muted-foreground">
+                Showing {(pageNumber - 1) * PAGE_SIZE + 1}&ndash;{Math.min(pageNumber * PAGE_SIZE, totalCount)} of {totalCount}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button size="icon" variant="outline" className="h-8 w-8" disabled={pageNumber <= 1} onClick={() => setPageNumber(1)} title="First page">
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button size="icon" variant="outline" className="h-8 w-8" disabled={pageNumber <= 1} onClick={() => setPageNumber((p) => Math.max(1, p - 1))} title="Previous page">
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="px-3 text-sm font-medium">
+                  Page {pageNumber} of {totalPages}
+                </span>
+                <Button size="icon" variant="outline" className="h-8 w-8" disabled={pageNumber >= totalPages} onClick={() => setPageNumber((p) => Math.min(totalPages, p + 1))} title="Next page">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button size="icon" variant="outline" className="h-8 w-8" disabled={pageNumber >= totalPages} onClick={() => setPageNumber(totalPages)} title="Last page">
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -317,10 +347,7 @@ export const AuditLogs = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">User</p>
-                  <p className="font-medium">{selectedLog.userName}</p>
-                  <p className="text-xs text-muted-foreground capitalize">
-                    {selectedLog.userRole.replace('_', ' ')}
-                  </p>
+                  <p className="font-medium">{selectedLog.userEmail || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Action</p>
@@ -330,13 +357,13 @@ export const AuditLogs = () => {
                       'bg-gray-100 text-gray-800'
                     }
                   >
-                    {selectedLog.action.replace('_', ' ')}
+                    {(selectedLog.action || '').replace(/_/g, ' ')}
                   </Badge>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Entity</p>
                   <p className="font-medium">
-                    {selectedLog.entity} ({selectedLog.entityId})
+                    {selectedLog.entityType} ({selectedLog.entityId || '-'})
                   </p>
                 </div>
                 {selectedLog.ipAddress && (
@@ -347,11 +374,11 @@ export const AuditLogs = () => {
                 )}
               </div>
 
-              {selectedLog.details && (
+              {selectedLog.description && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Details</p>
+                  <p className="text-sm text-muted-foreground mb-1">Description</p>
                   <p className="rounded-lg bg-muted p-3 text-sm">
-                    {selectedLog.details}
+                    {selectedLog.description}
                   </p>
                 </div>
               )}
@@ -360,7 +387,7 @@ export const AuditLogs = () => {
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Previous Values</p>
                   <pre className="rounded-lg bg-muted p-3 text-xs overflow-x-auto">
-                    {JSON.stringify(selectedLog.oldValues, null, 2)}
+                    {JSON.stringify(JSON.parse(selectedLog.oldValues), null, 2)}
                   </pre>
                 </div>
               )}
@@ -369,7 +396,7 @@ export const AuditLogs = () => {
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">New Values</p>
                   <pre className="rounded-lg bg-muted p-3 text-xs overflow-x-auto">
-                    {JSON.stringify(selectedLog.newValues, null, 2)}
+                    {JSON.stringify(JSON.parse(selectedLog.newValues), null, 2)}
                   </pre>
                 </div>
               )}

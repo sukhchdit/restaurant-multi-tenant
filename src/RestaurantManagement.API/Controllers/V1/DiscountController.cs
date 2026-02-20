@@ -83,6 +83,48 @@ public class DiscountController : ControllerBase
         return StatusCode(result.StatusCode, result);
     }
 
+    [HttpGet("coupons")]
+    [Authorize(Policy = Permissions.DiscountView)]
+    [ProducesResponseType(typeof(ApiResponse<List<CouponDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetCoupons(CancellationToken cancellationToken)
+    {
+        var result = await _discountService.GetCouponsAsync(cancellationToken);
+        return StatusCode(result.StatusCode, result);
+    }
+
+    [HttpPost("coupons")]
+    [Authorize(Policy = Permissions.DiscountCreate)]
+    [ProducesResponseType(typeof(ApiResponse<CouponDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CreateCoupon([FromBody] CreateCouponDto dto, CancellationToken cancellationToken)
+    {
+        var result = await _discountService.CreateCouponAsync(dto, cancellationToken);
+        if (result.Success) await BroadcastAsync("DiscountUpdated");
+        return StatusCode(result.StatusCode, result);
+    }
+
+    [HttpDelete("coupons/{id:guid}")]
+    [Authorize(Policy = Permissions.DiscountDelete)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteCoupon(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _discountService.DeleteCouponAsync(id, cancellationToken);
+        if (result.Success) await BroadcastAsync("DiscountUpdated");
+        return StatusCode(result.StatusCode, result);
+    }
+
+    [HttpPatch("coupons/{id:guid}/toggle")]
+    [Authorize(Policy = Permissions.DiscountUpdate)]
+    [ProducesResponseType(typeof(ApiResponse<CouponDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ToggleCouponActive(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _discountService.ToggleCouponActiveAsync(id, cancellationToken);
+        if (result.Success) await BroadcastAsync("DiscountUpdated");
+        return StatusCode(result.StatusCode, result);
+    }
+
     [HttpGet("coupons/{couponCode}/validate")]
     [Authorize(Policy = Permissions.DiscountView)]
     [ProducesResponseType(typeof(ApiResponse<CouponDto>), StatusCodes.Status200OK)]

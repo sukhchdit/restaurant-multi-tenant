@@ -17,6 +17,7 @@ import { Billing } from '@/pages/Billing';
 import { Accounts } from '@/pages/Accounts';
 import { AuditLogs } from '@/pages/AuditLogs';
 import { Notifications } from '@/pages/Notifications';
+import { Combos } from '@/pages/Combos';
 import { RootLayout } from '@/components/layout/RootLayout';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 
@@ -46,6 +47,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['SuperAdmin', 'RestaurantAdmin', 'Manager']}>
             <MenuManagement />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'combos',
+        element: (
+          <ProtectedRoute allowedRoles={['SuperAdmin', 'RestaurantAdmin', 'Manager']}>
+            <Combos />
           </ProtectedRoute>
         ),
       },

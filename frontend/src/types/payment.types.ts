@@ -6,7 +6,7 @@ export interface Payment {
   orderNumber?: string;
   amount: number;
   paymentMethod: PaymentMethod;
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  status: 'pending' | 'paid' | 'partially-paid' | 'failed' | 'refunded';
   transactionId?: string;
   paidAt?: string;
   notes?: string;

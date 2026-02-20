@@ -94,7 +94,9 @@ public class BillingService : IBillingService
             CgstAmount = cgstAmount,
             SgstAmount = sgstAmount,
             GstAmount = gstAmount,
-            TotalAmount = taxableAmount + gstAmount,
+            VatAmount = order.VatAmount,
+            ExtraCharges = order.ExtraCharges,
+            TotalAmount = taxableAmount + gstAmount + order.VatAmount + order.ExtraCharges,
             PaymentMethod = order.PaymentMethod,
             PaymentStatus = order.PaymentStatus,
             CreatedBy = _currentUser.UserId
@@ -172,6 +174,8 @@ public class BillingService : IBillingService
                    + $"Discount: -{invoice.DiscountAmount:C}\n"
                    + $"CGST: {invoice.CgstAmount:C}\n"
                    + $"SGST: {invoice.SgstAmount:C}\n"
+                   + (invoice.VatAmount > 0 ? $"VAT: {invoice.VatAmount:C}\n" : "")
+                   + (invoice.ExtraCharges > 0 ? $"Extra Charges: {invoice.ExtraCharges:C}\n" : "")
                    + $"Total: {invoice.TotalAmount:C}\n";
 
         var pdfBytes = System.Text.Encoding.UTF8.GetBytes(content);

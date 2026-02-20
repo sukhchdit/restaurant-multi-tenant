@@ -163,6 +163,13 @@ public class OrderController : ControllerBase
                 await _kitchenHub.Clients.Group($"kitchen_{tenantId}")
                     .SendAsync("KOTUpdated", new { orderId = result.Data.Id });
 
+                // Broadcast inventory update when stock is deducted (Confirmed, or Preparing from Pending)
+                if (dto.Status == OrderStatus.Confirmed || dto.Status == OrderStatus.Preparing)
+                {
+                    await _orderHub.Clients.Group($"tenant_{tenantId}")
+                        .SendAsync("InventoryUpdated", new { orderId = result.Data.Id });
+                }
+
                 // Auto-generate invoice when order is served or completed
                 if (result.Data.Status == OrderStatus.Served || result.Data.Status == OrderStatus.Completed)
                 {
