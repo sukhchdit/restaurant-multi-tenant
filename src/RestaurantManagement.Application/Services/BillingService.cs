@@ -123,6 +123,128 @@ public class BillingService : IBillingService
         return ApiResponse<InvoiceDto>.Ok(result!, "Invoice generated successfully.");
     }
 
+    public async Task<ApiResponse<InvoiceDto>> GenerateOrUpdateInvoiceAsync(Guid orderId, CancellationToken cancellationToken = default)
+    {
+        var order = await _orderRepository.Query()
+            .Include(o => o.OrderItems)
+            .Include(o => o.Customer)
+            .FirstOrDefaultAsync(o => o.Id == orderId && !o.IsDeleted, cancellationToken);
+
+        if (order == null)
+            return ApiResponse<InvoiceDto>.Fail("Order not found.", 404);
+
+        var restaurantId = order.RestaurantId;
+
+        // Get tax configuration
+        var taxConfigs = await _taxConfigRepository.FindAsync(
+            t => t.RestaurantId == restaurantId && t.IsActive && !t.IsDeleted, cancellationToken);
+
+        decimal cgstRate = 0, sgstRate = 0;
+        foreach (var tax in taxConfigs)
+        {
+            var taxName = tax.Name.ToUpper();
+            if (taxName.Contains("CGST"))
+                cgstRate = tax.Rate;
+            else if (taxName.Contains("SGST"))
+                sgstRate = tax.Rate;
+        }
+
+        var taxableAmount = order.SubTotal - order.DiscountAmount;
+        var cgstAmount = Math.Round(taxableAmount * cgstRate / 100, 2);
+        var sgstAmount = Math.Round(taxableAmount * sgstRate / 100, 2);
+        var gstAmount = cgstAmount + sgstAmount;
+        var invoiceTotal = taxableAmount + gstAmount + order.VatAmount + order.ExtraCharges;
+
+        var existingInvoice = await _invoiceRepository.Query()
+            .Include(i => i.LineItems)
+            .FirstOrDefaultAsync(i => i.OrderId == orderId && !i.IsDeleted, cancellationToken);
+
+        if (existingInvoice != null)
+        {
+            // Update existing invoice
+            existingInvoice.CustomerName = order.CustomerName ?? order.Customer?.FullName;
+            existingInvoice.CustomerPhone = order.CustomerPhone ?? order.Customer?.Phone;
+            existingInvoice.SubTotal = order.SubTotal;
+            existingInvoice.DiscountAmount = order.DiscountAmount;
+            existingInvoice.CgstAmount = cgstAmount;
+            existingInvoice.SgstAmount = sgstAmount;
+            existingInvoice.GstAmount = gstAmount;
+            existingInvoice.VatAmount = order.VatAmount;
+            existingInvoice.ExtraCharges = order.ExtraCharges;
+            existingInvoice.TotalAmount = invoiceTotal;
+            existingInvoice.PaymentMethod = order.PaymentMethod;
+            existingInvoice.PaymentStatus = order.PaymentStatus;
+            existingInvoice.UpdatedAt = DateTime.UtcNow;
+            existingInvoice.UpdatedBy = _currentUser.UserId;
+
+            _invoiceRepository.Update(existingInvoice);
+
+            // Replace line items
+            if (existingInvoice.LineItems.Any())
+                _lineItemRepository.DeleteRange(existingInvoice.LineItems);
+
+            var updatedLineItems = order.OrderItems.Select(oi => new InvoiceLineItem
+            {
+                InvoiceId = existingInvoice.Id,
+                Description = oi.MenuItemName,
+                Quantity = oi.Quantity,
+                UnitPrice = oi.UnitPrice,
+                TotalPrice = oi.TotalPrice,
+                TaxRate = cgstRate + sgstRate,
+                TaxAmount = Math.Round(oi.TotalPrice * (cgstRate + sgstRate) / 100, 2)
+            }).ToList();
+
+            await _lineItemRepository.AddRangeAsync(updatedLineItems, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            var updatedDto = await GetInvoiceDtoByIdAsync(existingInvoice.Id, cancellationToken);
+            return ApiResponse<InvoiceDto>.Ok(updatedDto!, "Invoice updated successfully.");
+        }
+
+        // Create new invoice
+        var invoiceNumber = $"INV-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..6].ToUpper()}";
+
+        var invoice = new Invoice
+        {
+            RestaurantId = restaurantId,
+            TenantId = order.TenantId,
+            OrderId = orderId,
+            InvoiceNumber = invoiceNumber,
+            CustomerName = order.CustomerName ?? order.Customer?.FullName,
+            CustomerPhone = order.CustomerPhone ?? order.Customer?.Phone,
+            SubTotal = order.SubTotal,
+            DiscountAmount = order.DiscountAmount,
+            CgstAmount = cgstAmount,
+            SgstAmount = sgstAmount,
+            GstAmount = gstAmount,
+            VatAmount = order.VatAmount,
+            ExtraCharges = order.ExtraCharges,
+            TotalAmount = invoiceTotal,
+            PaymentMethod = order.PaymentMethod,
+            PaymentStatus = order.PaymentStatus,
+            CreatedBy = _currentUser.UserId
+        };
+
+        await _invoiceRepository.AddAsync(invoice, cancellationToken);
+
+        var lineItems = order.OrderItems.Select(oi => new InvoiceLineItem
+        {
+            InvoiceId = invoice.Id,
+            Description = oi.MenuItemName,
+            Quantity = oi.Quantity,
+            UnitPrice = oi.UnitPrice,
+            TotalPrice = oi.TotalPrice,
+            TaxRate = cgstRate + sgstRate,
+            TaxAmount = Math.Round(oi.TotalPrice * (cgstRate + sgstRate) / 100, 2)
+        }).ToList();
+
+        await _lineItemRepository.AddRangeAsync(lineItems, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var result = await GetInvoiceDtoByIdAsync(invoice.Id, cancellationToken);
+        return ApiResponse<InvoiceDto>.Ok(result!, "Invoice generated successfully.");
+    }
+
     public async Task<ApiResponse<PaginatedResultDto<InvoiceDto>>> GetInvoicesAsync(
         int pageNumber = 1, int pageSize = 20, CancellationToken cancellationToken = default)
     {

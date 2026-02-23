@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { orderApi } from '@/services/api/orderApi';
 import { menuApi } from '@/services/api/menuApi';
@@ -33,8 +33,10 @@ import { cn } from '@/components/ui/utils';
 import { toast } from 'sonner';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { KeyboardShortcutHint } from '@/components/keyboard/KeyboardShortcutHint';
-import { printBill } from '@/components/order/PrintBill';
-import { printKOT } from '@/components/order/PrintKOT';
+import { BillPreviewDialog } from '@/components/order/PrintBill';
+import type { PrintBillData } from '@/components/order/PrintBill';
+import { printKOT, KOTPreviewDialog } from '@/components/order/PrintKOT';
+import type { PrintKOTData } from '@/components/order/PrintKOT';
 import type { Order, OrderStatus, OrderType, CreateOrderRequest, UpdateOrderRequest } from '@/types/order.types';
 import type { MenuItem } from '@/types/menu.types';
 import type { ApiResponse } from '@/types/api.types';
@@ -111,8 +113,10 @@ const MenuItemSearch = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const entries: DropdownEntry[] = useMemo(() => {
     const menuEntries: DropdownEntry[] = items.map((item) => ({
@@ -139,6 +143,17 @@ const MenuItemSearch = ({
     entry.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [search]);
+
+  useEffect(() => {
+    if (highlightedIndex >= 0 && listRef.current) {
+      const items = listRef.current.querySelectorAll('[data-item]');
+      items[highlightedIndex]?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [highlightedIndex]);
+
   const handleSelect = (entry: DropdownEntry) => {
     if (entry.isCombo && onSelectCombo) {
       const combo = combos.find((c) => `combo:${c.id}` === entry.id);
@@ -148,18 +163,40 @@ const MenuItemSearch = ({
     }
     setSearch(entry.name);
     setOpen(false);
+    setHighlightedIndex(-1);
     inputRef.current?.blur();
   };
 
   const handleBlur = (e: React.FocusEvent) => {
     if (containerRef.current && !containerRef.current.contains(e.relatedTarget as Node)) {
       setOpen(false);
+      setHighlightedIndex(-1);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!open) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev < filtered.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : filtered.length - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightedIndex >= 0 && highlightedIndex < filtered.length) {
+        handleSelect(filtered[highlightedIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+      setHighlightedIndex(-1);
+      inputRef.current?.blur();
     }
   };
 
   return (
     <div className="space-y-2">
-      {label && <Label>{label}{required ? ' *' : ''}</Label>}
+      {label && <Label>{label}{required ? <span className="text-red-500"> *</span> : ''}</Label>}
       <div ref={containerRef} className="relative" onBlur={handleBlur}>
         <div className="flex items-center gap-2 rounded-md border border-input bg-background px-3 h-9 focus-within:ring-1 focus-within:ring-ring">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -171,27 +208,30 @@ const MenuItemSearch = ({
             value={search}
             onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
             onFocus={() => { setOpen(true); inputRef.current?.select(); }}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') { setOpen(false); inputRef.current?.blur(); }
-            }}
+            onKeyDown={handleKeyDown}
           />
           <Badge variant="secondary" className="shrink-0 text-xs">{entries.length} items</Badge>
         </div>
 
         {open && (
           <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg">
-            <div className="max-h-56 overflow-y-auto p-1">
+            <div ref={listRef} className="max-h-56 overflow-y-auto p-1">
               {filtered.length === 0 ? (
                 <p className="py-4 text-center text-sm text-muted-foreground">
                   No items match &ldquo;{search}&rdquo;
                 </p>
               ) : (
-                filtered.map((entry) => (
+                filtered.map((entry, idx) => (
                   <button
                     key={entry.id}
                     type="button"
-                    className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer"
+                    data-item
+                    className={cn(
+                      'flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground cursor-pointer',
+                      idx === highlightedIndex && 'bg-accent text-accent-foreground'
+                    )}
                     onMouseDown={(e) => e.preventDefault()}
+                    onMouseEnter={() => setHighlightedIndex(idx)}
                     onClick={() => handleSelect(entry)}
                   >
                     <div className="flex items-center gap-2 min-w-0">
@@ -265,6 +305,10 @@ export const OrderManagement = () => {
   const [newOrderStagedQty, setNewOrderStagedQty] = useState(1);
   const [newOrderIsHalf, setNewOrderIsHalf] = useState(false);
   const [searchKey, setSearchKey] = useState(0);
+  const [kotPreviewOpen, setKotPreviewOpen] = useState(false);
+  const [kotPreviewData, setKotPreviewData] = useState<PrintKOTData | null>(null);
+  const [billPreviewOpen, setBillPreviewOpen] = useState(false);
+  const [billPreviewData, setBillPreviewData] = useState<PrintBillData | null>(null);
 
   // ── Payment fields ──
   const [paymentMethod, setPaymentMethod] = useState('cash');
@@ -550,10 +594,6 @@ export const OrderManagement = () => {
       toast.error('Please add at least one item to the order');
       return;
     }
-    if (paidAmount < grandTotal) {
-      toast.error(`Paid amount (Rs. ${paidAmount.toFixed(2)}) is less than Grand Total (Rs. ${grandTotal.toFixed(2)})`);
-      return;
-    }
     const request: CreateOrderRequest = {
       orderType: orderType as CreateOrderRequest['orderType'],
       customerName: customerName || undefined,
@@ -579,7 +619,7 @@ export const OrderManagement = () => {
   const handlePrintBill = () => {
     const waiter = waiters.find((w) => w.id === waiterId);
     const table = newOrderTables.find((t) => t.id === selectedTableId);
-    printBill({
+    setBillPreviewData({
       orderNumber: 'NEW',
       date: new Date().toLocaleString(),
       customerName: customerName || 'Guest',
@@ -595,12 +635,13 @@ export const OrderManagement = () => {
       grandTotal,
       paidAmount,
     });
+    setBillPreviewOpen(true);
   };
 
   const handlePrintKOT = () => {
     const waiter = waiters.find((w) => w.id === waiterId);
     const table = newOrderTables.find((t) => t.id === selectedTableId);
-    printKOT({
+    setKotPreviewData({
       orderNumber: 'NEW',
       date: new Date().toLocaleString(),
       tableNumber: table?.tableNumber,
@@ -608,6 +649,7 @@ export const OrderManagement = () => {
       items: orderItems.map((i) => ({ name: i.name, qty: i.quantity })),
       specialNotes: specialNotes || undefined,
     });
+    setKotPreviewOpen(true);
   };
 
   // ── Data ──
@@ -644,6 +686,15 @@ export const OrderManagement = () => {
   useKeyboardShortcuts(pageShortcuts);
 
   const handleStatusUpdate = (orderId: string, newStatus: string) => {
+    if (newStatus === 'completed') {
+      const order = orders.find((o) => o.id === orderId) ?? selectedOrder;
+      if (order && order.paidAmount < order.totalAmount) {
+        toast.error(
+          `Paid amount (Rs. ${order.paidAmount.toFixed(2)}) is less than Grand Total (Rs. ${order.totalAmount.toFixed(2)}). Payment must be completed before marking as Completed.`
+        );
+        return;
+      }
+    }
     updateStatusMutation.mutate({ id: orderId, status: newStatus });
   };
 
@@ -987,7 +1038,7 @@ export const OrderManagement = () => {
             {/* Row 1: Order Type, Table, Waiter, Customer Name, Mobile, + New Order button */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
               <div className="space-y-2">
-                <Label className="font-medium">Order Type *</Label>
+                <Label className="font-medium">Order Type <span className="text-red-500">*</span></Label>
                 <SearchableSelect
                   value={orderType}
                   onValueChange={setOrderType}
@@ -1511,7 +1562,7 @@ export const OrderManagement = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  printBill({
+                  setBillPreviewData({
                     orderNumber: selectedOrder.orderNumber,
                     date: new Date(selectedOrder.createdAt).toLocaleString(),
                     customerName: selectedOrder.customerName || 'Guest',
@@ -1527,6 +1578,7 @@ export const OrderManagement = () => {
                     grandTotal: selectedOrder.totalAmount,
                     paidAmount: selectedOrder.paidAmount,
                   });
+                  setBillPreviewOpen(true);
                 }}
               >
                 <Printer className="mr-2 h-4 w-4" /> Print Bill
@@ -1535,8 +1587,10 @@ export const OrderManagement = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => {
+                  const seq = selectedOrder.orderNumber.replace(/\D/g, '');
                   printKOT({
                     orderNumber: selectedOrder.orderNumber,
+                    kotNumber: seq ? `KOT-${seq.padStart(4, '0')}` : undefined,
                     date: new Date(selectedOrder.createdAt).toLocaleString(),
                     tableNumber: selectedOrder.tableNumber,
                     waiterName: selectedOrder.waiterName,
@@ -1575,6 +1629,10 @@ export const OrderManagement = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* KOT Preview Dialog */}
+      <KOTPreviewDialog data={kotPreviewData} open={kotPreviewOpen} onOpenChange={setKotPreviewOpen} />
+      <BillPreviewDialog data={billPreviewData} open={billPreviewOpen} onOpenChange={setBillPreviewOpen} />
     </div>
   );
 };

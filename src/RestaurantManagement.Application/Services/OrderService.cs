@@ -673,8 +673,8 @@ public class OrderService : IOrderService
             await DeductStockForOrderAsync(order, cancellationToken);
         }
 
-        // Free table on Served or Completed
-        if ((dto.Status == OrderStatus.Served || dto.Status == OrderStatus.Completed) && order.TableId.HasValue)
+        // Free table only on Completed (table stays occupied while served)
+        if (dto.Status == OrderStatus.Completed && order.TableId.HasValue)
         {
             var table = await _tableRepository.GetByIdAsync(order.TableId.Value, cancellationToken);
             if (table != null && table.CurrentOrderId == order.Id)

@@ -73,8 +73,9 @@ export const Payments = () => {
       setProcessDialogOpen(false);
       resetForm();
     },
-    onError: () => {
-      toast.error('Failed to process payment');
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to process payment';
+      toast.error(msg);
     },
   });
 
@@ -85,8 +86,9 @@ export const Payments = () => {
       queryClient.invalidateQueries({ queryKey: ['payments'] });
       toast.success('Refund initiated');
     },
-    onError: () => {
-      toast.error('Failed to process refund');
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to process refund';
+      toast.error(msg);
     },
   });
 
@@ -107,9 +109,18 @@ export const Payments = () => {
 
   const handleProcessPayment = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!orderId.trim()) {
+      toast.error('Please enter an Order ID');
+      return;
+    }
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      toast.error('Please enter a valid payment amount');
+      return;
+    }
     processPaymentMutation.mutate({
-      orderId,
-      amount: parseFloat(amount),
+      orderId: orderId.trim(),
+      amount: parsedAmount,
       paymentMethod,
       transactionId: transactionId || undefined,
     });
