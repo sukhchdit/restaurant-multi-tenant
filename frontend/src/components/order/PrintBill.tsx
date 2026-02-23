@@ -1,10 +1,14 @@
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Printer } from 'lucide-react';
+
 interface PrintBillItem {
   name: string;
   rate: number;
   qty: number;
 }
 
-interface PrintBillData {
+export interface PrintBillData {
   orderNumber: string;
   date: string;
   customerName: string;
@@ -21,7 +25,7 @@ interface PrintBillData {
   paidAmount: number;
 }
 
-export function printBill(data: PrintBillData) {
+function doPrint(data: PrintBillData) {
   const balance = data.grandTotal - data.paidAmount;
 
   const rows = data.items
@@ -89,4 +93,138 @@ export function printBill(data: PrintBillData) {
     win.document.write(html);
     win.document.close();
   }
+}
+
+export function BillPreviewDialog({
+  data,
+  open,
+  onOpenChange,
+}: {
+  data: PrintBillData | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  if (!data) return null;
+
+  const balance = data.grandTotal - data.paidAmount;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Bill Preview</DialogTitle>
+        </DialogHeader>
+
+        <div className="font-sans text-sm space-y-3 border border-border rounded-lg p-4 bg-white dark:bg-zinc-950">
+          <div className="text-center">
+            <h3 className="text-lg font-bold">Restaurant</h3>
+            <p className="text-xs text-muted-foreground">{data.orderNumber} &bull; {data.date}</p>
+          </div>
+
+          <div className="space-y-0.5 text-xs">
+            <div className="flex justify-between">
+              <span>Customer:</span>
+              <span className="font-bold">{data.customerName || 'Guest'}</span>
+            </div>
+            {data.tableNumber && (
+              <div className="flex justify-between">
+                <span>Table:</span>
+                <span className="font-bold">{data.tableNumber}</span>
+              </div>
+            )}
+            {data.waiterName && (
+              <div className="flex justify-between">
+                <span>Waiter:</span>
+                <span className="font-bold">{data.waiterName}</span>
+              </div>
+            )}
+          </div>
+
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b-2 border-black dark:border-white">
+                <th className="text-left py-1 px-1">#</th>
+                <th className="text-left py-1 px-1">Product</th>
+                <th className="text-right py-1 px-1">Rate</th>
+                <th className="text-center py-1 px-1">Qty</th>
+                <th className="text-right py-1 px-1">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.items.map((item, i) => (
+                <tr key={i} className="border-b border-gray-200 dark:border-gray-700">
+                  <td className="py-1 px-1">{i + 1}</td>
+                  <td className="py-1 px-1">{item.name}</td>
+                  <td className="py-1 px-1 text-right">Rs. {item.rate.toFixed(2)}</td>
+                  <td className="py-1 px-1 text-center">{item.qty}</td>
+                  <td className="py-1 px-1 text-right">Rs. {(item.rate * item.qty).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="space-y-1 text-xs">
+            <div className="flex justify-between">
+              <span>Sub Total</span>
+              <span>Rs. {data.subTotal.toFixed(2)}</span>
+            </div>
+            {data.discountAmount > 0 && (
+              <div className="flex justify-between">
+                <span>Discount ({data.discountPercentage}%)</span>
+                <span>-Rs. {data.discountAmount.toFixed(2)}</span>
+              </div>
+            )}
+            {data.gstAmount > 0 && (
+              <div className="flex justify-between">
+                <span>GST</span>
+                <span>Rs. {data.gstAmount.toFixed(2)}</span>
+              </div>
+            )}
+            {data.vatAmount > 0 && (
+              <div className="flex justify-between">
+                <span>VAT</span>
+                <span>Rs. {data.vatAmount.toFixed(2)}</span>
+              </div>
+            )}
+            {data.extraCharges > 0 && (
+              <div className="flex justify-between">
+                <span>Extra Charges</span>
+                <span>Rs. {data.extraCharges.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-bold text-base border-t-2 border-black dark:border-white pt-1 mt-1">
+              <span>Grand Total</span>
+              <span>Rs. {data.grandTotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Paid</span>
+              <span>Rs. {data.paidAmount.toFixed(2)}</span>
+            </div>
+            {balance > 0 && (
+              <div className="flex justify-between text-red-500">
+                <span>Balance Due</span>
+                <span>Rs. {balance.toFixed(2)}</span>
+              </div>
+            )}
+          </div>
+
+          <p className="text-center text-xs text-muted-foreground pt-2">Thank you for dining with us!</p>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+          <Button onClick={() => { doPrint(data); onOpenChange(false); }}>
+            <Printer className="mr-2 h-4 w-4" /> Print
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Keep the old function for backward compatibility (used in view dialog)
+export function printBill(data: PrintBillData) {
+  doPrint(data);
 }

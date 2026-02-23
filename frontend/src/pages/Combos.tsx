@@ -383,7 +383,7 @@ export const Combos = () => {
       </div>
 
       {/* Combos Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {combos.map((combo) => {
           const isExpired = combo.endDate ? new Date(combo.endDate) < new Date() : false;
           const savingsPercent =
@@ -530,7 +530,7 @@ export const Combos = () => {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Combo Name */}
             <div className="space-y-2">
-              <Label>Combo Name *</Label>
+              <Label>Combo Name <span className="text-red-500">*</span></Label>
               <Input
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
@@ -551,7 +551,7 @@ export const Combos = () => {
 
             {/* Products Included (Multi-select) */}
             <div className="space-y-2">
-              <Label>Products Included *</Label>
+              <Label>Products Included <span className="text-red-500">*</span></Label>
               <Popover open={productPickerOpen} onOpenChange={setProductPickerOpen}>
                 <PopoverTrigger asChild>
                   <button
@@ -666,7 +666,7 @@ export const Combos = () => {
                 <p className="text-xs text-muted-foreground">Auto-calculated</p>
               </div>
               <div className="space-y-2">
-                <Label>Combo Price *</Label>
+                <Label>Combo Price <span className="text-red-500">*</span></Label>
                 <Input
                   type="number"
                   step="0.01"

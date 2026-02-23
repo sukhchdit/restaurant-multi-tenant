@@ -517,7 +517,7 @@ export const MenuManagement = () => {
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="editName" className="text-sm font-medium">Name *</Label>
+                <Label htmlFor="editName" className="text-sm font-medium">Name <span className="text-red-500">*</span></Label>
                 <Input
                   id="editName"
                   className="h-9"
@@ -526,7 +526,7 @@ export const MenuManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Category *</Label>
+                <Label className="text-sm font-medium">Category <span className="text-red-500">*</span></Label>
                 <SearchableSelect
                   value={editForm.categoryId || ''}
                   onValueChange={(value) => {
@@ -550,7 +550,7 @@ export const MenuManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="editPrice" className="text-sm font-medium">Price *</Label>
+                <Label htmlFor="editPrice" className="text-sm font-medium">Price <span className="text-red-500">*</span></Label>
                 <Input
                   id="editPrice"
                   className="h-9"
@@ -697,7 +697,7 @@ export const MenuManagement = () => {
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium">Name *</Label>
+                <Label htmlFor="name" className="text-sm font-medium">Name <span className="text-red-500">*</span></Label>
                 <Input
                   id="name"
                   className="h-9"
@@ -707,7 +707,7 @@ export const MenuManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
+                <Label htmlFor="category" className="text-sm font-medium">Category <span className="text-red-500">*</span></Label>
                 <SearchableSelect
                   value={form.categoryId}
                   onValueChange={(value) => {
@@ -731,7 +731,7 @@ export const MenuManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="price" className="text-sm font-medium">Price *</Label>
+                <Label htmlFor="price" className="text-sm font-medium">Price <span className="text-red-500">*</span></Label>
                 <Input
                   id="price"
                   className="h-9"

@@ -142,7 +142,10 @@ export const Billing = () => {
       toast.success('Payment recorded successfully');
       closePayDialog();
     },
-    onError: () => toast.error('Failed to process payment'),
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to process payment';
+      toast.error(msg);
+    },
   });
 
   const invoices = invoicesResponse?.data?.items ?? [];

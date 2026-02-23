@@ -271,7 +271,7 @@ export const StaffManagement = () => {
             className="space-y-4"
           >
             <div className="space-y-2">
-              <Label htmlFor="editFullName">Full Name *</Label>
+              <Label htmlFor="editFullName">Full Name <span className="text-red-500">*</span></Label>
               <Input
                 id="editFullName"
                 value={staffForm.fullName}
@@ -290,7 +290,7 @@ export const StaffManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="editPhone">Phone *</Label>
+                <Label htmlFor="editPhone">Phone <span className="text-red-500">*</span></Label>
                 <Input
                   id="editPhone"
                   value={staffForm.phone}
@@ -301,7 +301,7 @@ export const StaffManagement = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Role *</Label>
+                <Label>Role <span className="text-red-500">*</span></Label>
                 <SearchableSelect
                   value={staffForm.role}
                   onValueChange={(value) => setStaffForm({ ...staffForm, role: value })}
@@ -317,7 +317,7 @@ export const StaffManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Shift *</Label>
+                <Label>Shift <span className="text-red-500">*</span></Label>
                 <SearchableSelect
                   value={staffForm.shift}
                   onValueChange={(value) => setStaffForm({ ...staffForm, shift: value as StaffShift })}
@@ -384,7 +384,7 @@ export const StaffManagement = () => {
             className="space-y-4"
           >
             <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name *</Label>
+              <Label htmlFor="fullName">Full Name <span className="text-red-500">*</span></Label>
               <Input
                 id="fullName"
                 value={staffForm.fullName}
@@ -405,7 +405,7 @@ export const StaffManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone *</Label>
+                <Label htmlFor="phone">Phone <span className="text-red-500">*</span></Label>
                 <Input
                   id="phone"
                   value={staffForm.phone}
@@ -417,7 +417,7 @@ export const StaffManagement = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Role *</Label>
+                <Label>Role <span className="text-red-500">*</span></Label>
                 <SearchableSelect
                   value={staffForm.role}
                   onValueChange={(value) => setStaffForm({ ...staffForm, role: value })}
@@ -433,7 +433,7 @@ export const StaffManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Shift *</Label>
+                <Label>Shift <span className="text-red-500">*</span></Label>
                 <SearchableSelect
                   value={staffForm.shift}
                   onValueChange={(value) => setStaffForm({ ...staffForm, shift: value as StaffShift })}

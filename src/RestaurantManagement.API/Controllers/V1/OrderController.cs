@@ -82,12 +82,26 @@ public class OrderController : ControllerBase
         if (result.Success && result.Data != null)
         {
             var tenantId = _currentUser.TenantId;
+
+            // Auto-generate billing record
+            try
+            {
+                await _billingService.GenerateOrUpdateInvoiceAsync(result.Data.Id, cancellationToken);
+                _logger.LogInformation("Auto-generated invoice for new order {OrderId}", result.Data.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Auto-invoice failed for new order {OrderId}", result.Data.Id);
+            }
+
             if (tenantId != null)
             {
                 await _orderHub.Clients.Group($"tenant_{tenantId}")
                     .SendAsync("OrderCreated", new { orderId = result.Data.Id });
                 await _kitchenHub.Clients.Group($"kitchen_{tenantId}")
                     .SendAsync("NewKOT", new { orderId = result.Data.Id });
+                await _orderHub.Clients.Group($"tenant_{tenantId}")
+                    .SendAsync("BillingUpdated", new { });
 
                 var notification = await _notificationService.CreateForTenantUsersAsync(
                     $"New Order #{result.Data.OrderNumber}",
@@ -126,10 +140,24 @@ public class OrderController : ControllerBase
         if (result.Success && result.Data != null)
         {
             var tenantId = _currentUser.TenantId;
+
+            // Auto-update billing record
+            try
+            {
+                await _billingService.GenerateOrUpdateInvoiceAsync(id, cancellationToken);
+                _logger.LogInformation("Auto-updated invoice for order {OrderId}", id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Auto-invoice update failed for order {OrderId}", id);
+            }
+
             if (tenantId != null)
             {
                 await _orderHub.Clients.Group($"tenant_{tenantId}")
                     .SendAsync("OrderUpdated", new { orderId = result.Data.Id });
+                await _orderHub.Clients.Group($"tenant_{tenantId}")
+                    .SendAsync("BillingUpdated", new { });
 
                 if (result.Message?.Contains("New KOT") == true)
                 {
@@ -170,27 +198,17 @@ public class OrderController : ControllerBase
                         .SendAsync("InventoryUpdated", new { orderId = result.Data.Id });
                 }
 
-                // Auto-generate invoice when order is served or completed
-                if (result.Data.Status == OrderStatus.Served || result.Data.Status == OrderStatus.Completed)
+                // Auto-update invoice when order status changes
+                try
                 {
-                    try
-                    {
-                        var invoiceResult = await _billingService.GenerateInvoiceAsync(id, cancellationToken);
-                        if (invoiceResult.Success)
-                        {
-                            _logger.LogInformation("Auto-generated invoice for order {OrderId} on status {Status}", id, result.Data.Status);
-                            await _orderHub.Clients.Group($"tenant_{tenantId}")
-                                .SendAsync("BillingUpdated", new { });
-                        }
-                        else
-                        {
-                            _logger.LogWarning("Auto-invoice returned failure for order {OrderId}: {Message}", id, invoiceResult.Message);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Auto-invoice failed for order {OrderId} on status {Status}", id, result.Data.Status);
-                    }
+                    await _billingService.GenerateOrUpdateInvoiceAsync(id, cancellationToken);
+                    _logger.LogInformation("Auto-updated invoice for order {OrderId} on status {Status}", id, result.Data.Status);
+                    await _orderHub.Clients.Group($"tenant_{tenantId}")
+                        .SendAsync("BillingUpdated", new { });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Auto-invoice update failed for order {OrderId} on status {Status}", id, result.Data.Status);
                 }
             }
         }

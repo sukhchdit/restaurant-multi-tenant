@@ -112,7 +112,7 @@ export const CategoryDialog = ({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="categoryName">Name *</Label>
+            <Label htmlFor="categoryName">Name <span className="text-red-500">*</span></Label>
             <Input
               id="categoryName"
               value={name}

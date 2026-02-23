@@ -4,6 +4,8 @@ import { tableApi } from '@/services/api/tableApi';
 import { orderApi } from '@/services/api/orderApi';
 import { menuApi } from '@/services/api/menuApi';
 import { staffApi } from '@/services/api/staffApi';
+import axiosInstance from '@/services/api/axiosInstance';
+import type { ApiResponse } from '@/types/api.types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,16 +25,41 @@ import {
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import {
   Search, Plus, Pencil, Trash2, Minus,
-  Leaf, Printer, RotateCcw, X,
+  Leaf, Printer, RotateCcw, ClipboardList,
 } from 'lucide-react';
 import { cn } from '@/components/ui/utils';
 import { toast } from 'sonner';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { KeyboardShortcutHint } from '@/components/keyboard/KeyboardShortcutHint';
-import { printBill } from '@/components/order/PrintBill';
+import { BillPreviewDialog } from '@/components/order/PrintBill';
+import type { PrintBillData } from '@/components/order/PrintBill';
+import { KOTTilesDialog } from '@/components/order/PrintKOT';
 import type { RestaurantTable, TableStatus, CreateTableRequest } from '@/types/table.types';
-import type { Order, OrderStatus, CreateOrderRequest, UpdateOrderRequest } from '@/types/order.types';
+import type { Order, OrderStatus, CreateOrderRequest, UpdateOrderRequest, KitchenOrderTicket } from '@/types/order.types';
 import type { MenuItem } from '@/types/menu.types';
+
+interface ComboForOrder {
+  id: string;
+  name: string;
+  comboPrice: number;
+  originalTotalPrice: number;
+  isAvailable: boolean;
+  startDate?: string;
+  endDate?: string;
+  items: { menuItemId: string; menuItemName: string; menuItemPrice: number; quantity: number }[];
+}
+
+interface DropdownEntry {
+  id: string;
+  name: string;
+  price: number;
+  originalPrice?: number;
+  isVeg?: boolean;
+  isHalf?: boolean;
+  categoryName?: string;
+  isCombo?: boolean;
+  comboItems?: { menuItemId: string; menuItemName: string; menuItemPrice: number; quantity: number }[];
+}
 
 const statusDotColors: Record<TableStatus, string> = {
   available: 'bg-green-500',
@@ -57,44 +84,108 @@ const emptyTableForm: CreateTableRequest = {
   section: '',
 };
 
-/* ── MenuItemSearch (same as OrderManagement) ── */
+/* ── MenuItemSearch (with combo support) ── */
 const MenuItemSearch = ({
   items,
+  combos = [],
   onSelect,
+  onSelectCombo,
   label = 'Menu Items',
   required = false,
 }: {
   items: MenuItem[];
+  combos?: ComboForOrder[];
   onSelect: (item: { id: string; name: string; price: number; isHalf?: boolean }) => void;
+  onSelectCombo?: (combo: ComboForOrder) => void;
   label?: string;
   required?: boolean;
 }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
-  const filtered = items.filter((item) =>
-    item.name.toLowerCase().includes(search.toLowerCase())
+  const entries: DropdownEntry[] = useMemo(() => {
+    const menuEntries: DropdownEntry[] = items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      price: item.discountedPrice ?? item.price,
+      originalPrice: item.discountedPrice != null && item.discountedPrice < item.price ? item.price : undefined,
+      isVeg: item.isVeg,
+      isHalf: item.isHalf,
+      categoryName: item.categoryName,
+    }));
+    const comboEntries: DropdownEntry[] = combos.map((c) => ({
+      id: `combo:${c.id}`,
+      name: c.name,
+      price: c.comboPrice,
+      originalPrice: c.originalTotalPrice > c.comboPrice ? c.originalTotalPrice : undefined,
+      isCombo: true,
+      comboItems: c.items,
+    }));
+    return [...comboEntries, ...menuEntries];
+  }, [items, combos]);
+
+  const filtered = entries.filter((entry) =>
+    entry.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleSelect = (item: MenuItem) => {
-    const effectivePrice = item.discountedPrice ?? item.price;
-    onSelect({ id: item.id, name: item.name, price: effectivePrice, isHalf: item.isHalf });
-    setSearch(item.name);
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [search]);
+
+  useEffect(() => {
+    if (highlightedIndex >= 0 && listRef.current) {
+      const items = listRef.current.querySelectorAll('[data-item]');
+      items[highlightedIndex]?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [highlightedIndex]);
+
+  const handleSelect = (entry: DropdownEntry) => {
+    if (entry.isCombo && onSelectCombo) {
+      const combo = combos.find((c) => `combo:${c.id}` === entry.id);
+      if (combo) onSelectCombo(combo);
+    } else {
+      onSelect({ id: entry.id, name: entry.name, price: entry.price, isHalf: entry.isHalf });
+    }
+    setSearch(entry.name);
     setOpen(false);
+    setHighlightedIndex(-1);
     inputRef.current?.blur();
   };
 
   const handleBlur = (e: React.FocusEvent) => {
     if (containerRef.current && !containerRef.current.contains(e.relatedTarget as Node)) {
       setOpen(false);
+      setHighlightedIndex(-1);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!open) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev < filtered.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : filtered.length - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightedIndex >= 0 && highlightedIndex < filtered.length) {
+        handleSelect(filtered[highlightedIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+      setHighlightedIndex(-1);
+      inputRef.current?.blur();
     }
   };
 
   return (
     <div className="space-y-2">
-      {label && <Label>{label}{required ? ' *' : ''}</Label>}
+      {label && <Label>{label}{required ? <span className="text-red-500"> *</span> : ''}</Label>}
       <div ref={containerRef} className="relative" onBlur={handleBlur}>
         <div className="flex items-center gap-2 rounded-md border border-input bg-background px-3 h-9 focus-within:ring-1 focus-within:ring-ring">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -102,59 +193,64 @@ const MenuItemSearch = ({
             ref={inputRef}
             type="text"
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            placeholder="Search menu items..."
+            placeholder="Search menu items or combos..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
             onFocus={() => { setOpen(true); inputRef.current?.select(); }}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') { setOpen(false); inputRef.current?.blur(); }
-            }}
+            onKeyDown={handleKeyDown}
           />
-          <Badge variant="secondary" className="shrink-0 text-xs">{items.length} items</Badge>
+          <Badge variant="secondary" className="shrink-0 text-xs">{entries.length} items</Badge>
         </div>
 
         {open && (
           <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg">
-            <div className="max-h-56 overflow-y-auto p-1">
+            <div ref={listRef} className="max-h-56 overflow-y-auto p-1">
               {filtered.length === 0 ? (
                 <p className="py-4 text-center text-sm text-muted-foreground">
                   No items match &ldquo;{search}&rdquo;
                 </p>
               ) : (
-                filtered.map((item) => (
+                filtered.map((entry, idx) => (
                   <button
-                    key={item.id}
+                    key={entry.id}
                     type="button"
-                    className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer"
+                    data-item
+                    className={cn(
+                      'flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground cursor-pointer',
+                      idx === highlightedIndex && 'bg-accent text-accent-foreground'
+                    )}
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleSelect(item)}
+                    onMouseEnter={() => setHighlightedIndex(idx)}
+                    onClick={() => handleSelect(entry)}
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      {item.isVeg && (
+                      {entry.isCombo ? (
+                        <Badge className="text-[10px] px-1.5 py-0 shrink-0 bg-purple-600">Combo</Badge>
+                      ) : entry.isVeg ? (
                         <Leaf className="h-3.5 w-3.5 shrink-0 text-green-600" />
-                      )}
-                      <span className="truncate">{item.name}</span>
-                      {item.isHalf && (
+                      ) : null}
+                      <span className="truncate">{entry.name}</span>
+                      {entry.isHalf && (
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">Half</Badge>
                       )}
-                      {item.categoryName && (
+                      {entry.categoryName && (
                         <span className="text-xs text-muted-foreground shrink-0">
-                          {item.categoryName}
+                          {entry.categoryName}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1 shrink-0 font-medium">
-                      {item.discountedPrice != null && item.discountedPrice < item.price ? (
+                      {entry.originalPrice != null ? (
                         <>
                           <span className="text-xs text-muted-foreground line-through">
-                            Rs. {item.price.toFixed(2)}
+                            Rs. {entry.originalPrice.toFixed(2)}
                           </span>
                           <span className="text-green-600">
-                            Rs. {item.discountedPrice.toFixed(2)}
+                            Rs. {entry.price.toFixed(2)}
                           </span>
                         </>
                       ) : (
-                        <span>Rs. {item.price.toFixed(2)}</span>
+                        <span>Rs. {entry.price.toFixed(2)}</span>
                       )}
                     </div>
                   </button>
@@ -187,6 +283,11 @@ export const TableManagement = () => {
   const [stagedItem, setStagedItem] = useState<{ id: string; name: string; price: number; isHalf?: boolean } | null>(null);
   const [stagedQty, setStagedQty] = useState(1);
   const [stagedIsHalf, setStagedIsHalf] = useState(false);
+  const [searchKey, setSearchKey] = useState(0);
+  const [kotTilesOpen, setKotTilesOpen] = useState(false);
+  const [kotTilesData, setKotTilesData] = useState<KitchenOrderTicket[]>([]);
+  const [billPreviewOpen, setBillPreviewOpen] = useState(false);
+  const [billPreviewData, setBillPreviewData] = useState<PrintBillData | null>(null);
 
   // ── Payment fields ──
   const [paymentMethod, setPaymentMethod] = useState('cash');
@@ -222,6 +323,15 @@ export const TableManagement = () => {
     enabled: !!selectedTable,
   });
 
+  const { data: combosResponse } = useQuery({
+    queryKey: ['combos-for-order'],
+    queryFn: async (): Promise<ApiResponse<ComboForOrder[]>> => {
+      const res = await axiosInstance.get('/combos');
+      return res.data;
+    },
+    enabled: !!selectedTable,
+  });
+
   // ── Existing order query (for occupied tables) ──
   const activeOrderId = selectedTable?.currentOrderId ?? null;
   const { data: existingOrderRes, isLoading: isLoadingOrder } = useQuery({
@@ -233,6 +343,15 @@ export const TableManagement = () => {
   const isEditingOrder = !!activeOrderId && !!existingOrder;
 
   const menuItems = menuResponse?.data?.items ?? [];
+  const activeCombos = useMemo(() => {
+    const now = new Date();
+    return (combosResponse?.data ?? []).filter((c) => {
+      if (!c.isAvailable) return false;
+      if (c.startDate && new Date(c.startDate) > now) return false;
+      if (c.endDate && new Date(c.endDate) < now) return false;
+      return true;
+    });
+  }, [combosResponse]);
   const waiters = waitersRes?.data?.items ?? [];
   const tables = tablesResponse?.data ?? [];
   const availableTables = tables.filter((t) => t.status === 'available').length;
@@ -335,7 +454,14 @@ export const TableManagement = () => {
   // ── Order mutation ──
   const createOrderMutation = useMutation({
     mutationFn: (data: CreateOrderRequest) => orderApi.createOrder(data),
-    onSuccess: () => {
+    onSuccess: async (res) => {
+      const orderId = res?.data?.id;
+      // Auto-complete order if fully paid
+      if (orderId && paidAmount >= grandTotal && grandTotal > 0) {
+        try {
+          await orderApi.updateOrderStatus(orderId, 'completed');
+        } catch { /* status update is best-effort */ }
+      }
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['tables'] });
       queryClient.invalidateQueries({ queryKey: ['tables-for-order'] });
@@ -351,7 +477,14 @@ export const TableManagement = () => {
   const updateOrderMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateOrderRequest }) =>
       orderApi.updateOrder(id, data),
-    onSuccess: () => {
+    onSuccess: async (res) => {
+      const orderId = res?.data?.id;
+      // Auto-complete order if fully paid
+      if (orderId && paidAmount >= grandTotal && grandTotal > 0) {
+        try {
+          await orderApi.updateOrderStatus(orderId, 'completed');
+        } catch { /* status update is best-effort */ }
+      }
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['tables'] });
       queryClient.invalidateQueries({ queryKey: ['tables-for-order'] });
@@ -407,49 +540,38 @@ export const TableManagement = () => {
     setStagedIsHalf(item.isHalf ?? false);
   };
 
-  const confirmStagedItem = () => {
-    if (!stagedItem) return;
-    const qty = stagedIsHalf ? 1 : stagedQty;
+  const handleSelectCombo = (combo: ComboForOrder) => {
+    const originalTotal = combo.items.reduce((s, i) => s + i.menuItemPrice * i.quantity, 0);
+    const ratio = originalTotal > 0 ? combo.comboPrice / originalTotal : 1;
     setOrderItems((prev) => {
-      const existing = prev.find((i) => i.menuItemId === stagedItem.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.menuItemId === stagedItem.id
-            ? { ...i, quantity: stagedIsHalf ? 1 : i.quantity + qty }
-            : i
-        );
+      const updated = [...prev];
+      for (const ci of combo.items) {
+        const adjustedPrice = Math.round(ci.menuItemPrice * ratio * 100) / 100;
+        const existing = updated.find((i) => i.menuItemId === ci.menuItemId);
+        if (existing) {
+          existing.quantity += ci.quantity;
+        } else {
+          updated.push({
+            menuItemId: ci.menuItemId,
+            name: ci.menuItemName,
+            quantity: ci.quantity,
+            price: adjustedPrice,
+          });
+        }
       }
-      return [...prev, {
-        menuItemId: stagedItem.id,
-        name: stagedItem.name,
-        quantity: qty,
-        price: stagedItem.price,
-        isHalf: stagedIsHalf,
-      }];
+      return updated;
     });
-    setStagedItem(null);
-    setStagedQty(1);
-    setStagedIsHalf(false);
+    toast.success(`Added combo "${combo.name}" to order`);
   };
 
-  const deleteItemFromOrder = (menuItemId: string) => {
-    setOrderItems((prev) => prev.filter((i) => i.menuItemId !== menuItemId));
-  };
-
-  const handleSubmitOrder = () => {
-    if (!selectedTable) return;
-    if (orderItems.length === 0) {
-      toast.error('Please add at least one item to the order');
-      return;
-    }
-
-    const items = orderItems.map((i) => ({
+  const saveOrderToDb = (itemsList: typeof orderItems) => {
+    if (!selectedTable || itemsList.length === 0) return;
+    const items = itemsList.map((i) => ({
       menuItemId: i.menuItemId,
       quantity: i.quantity,
     }));
 
     if (isEditingOrder && existingOrder) {
-      // Update existing order
       const data: UpdateOrderRequest = {
         orderType: orderType as UpdateOrderRequest['orderType'],
         customerName: customerName || undefined,
@@ -468,7 +590,6 @@ export const TableManagement = () => {
       };
       updateOrderMutation.mutate({ id: existingOrder.id, data });
     } else {
-      // Create new order
       const request: CreateOrderRequest = {
         orderType: orderType as CreateOrderRequest['orderType'],
         customerName: customerName || undefined,
@@ -489,10 +610,58 @@ export const TableManagement = () => {
     }
   };
 
+  const confirmStagedItem = () => {
+    if (!stagedItem) return;
+    const qty = stagedIsHalf ? 1 : stagedQty;
+    const newItem = {
+      menuItemId: stagedItem.id,
+      name: stagedItem.name,
+      quantity: qty,
+      price: stagedItem.price,
+      isHalf: stagedIsHalf,
+    };
+    const updatedItems = [...orderItems, newItem];
+    setOrderItems(updatedItems);
+    setStagedItem(null);
+    setStagedQty(1);
+    setStagedIsHalf(false);
+    setSearchKey((k) => k + 1);
+
+    // Auto-save to database
+    saveOrderToDb(updatedItems);
+  };
+
+  const deleteItemFromOrder = (index: number) => {
+    const updatedItems = orderItems.filter((_, i) => i !== index);
+    setOrderItems(updatedItems);
+
+    // Auto-save to database (if items remain)
+    if (updatedItems.length > 0) {
+      saveOrderToDb(updatedItems);
+    }
+  };
+
+  const handleSubmitOrder = () => {
+    if (!selectedTable) return;
+    if (!waiterId) {
+      toast.error('Please assign a waiter before creating the order.');
+      return;
+    }
+    if (orderItems.length === 0) {
+      toast.error('Please add at least one item to the order');
+      return;
+    }
+    if (paidAmount < grandTotal) {
+      toast.error(`Paid amount (Rs. ${paidAmount.toFixed(2)}) is less than Grand Total (Rs. ${grandTotal.toFixed(2)}). Payment must be completed before saving the order.`);
+      return;
+    }
+    saveOrderToDb(orderItems);
+  };
+
   const handlePrintBill = () => {
     if (!selectedTable) return;
     const waiter = waiters.find((w) => w.id === waiterId);
-    printBill({
+    setBillPreviewData({
       orderNumber: existingOrder?.orderNumber ?? 'NEW',
       date: existingOrder ? new Date(existingOrder.createdAt).toLocaleString() : new Date().toLocaleString(),
       customerName: customerName || 'Guest',
@@ -508,6 +677,26 @@ export const TableManagement = () => {
       grandTotal,
       paidAmount,
     });
+    setBillPreviewOpen(true);
+  };
+
+  const handlePrintKOT = async () => {
+    if (!selectedTable || !existingOrder) {
+      toast.error('Save the order first to generate KOTs.');
+      return;
+    }
+    try {
+      const res = await orderApi.getActiveKOTs();
+      const orderKots = (res?.data ?? []).filter((k) => k.orderId === existingOrder.id);
+      if (orderKots.length === 0) {
+        toast.error('No KOTs found for this order.');
+        return;
+      }
+      setKotTilesData(orderKots);
+      setKotTilesOpen(true);
+    } catch {
+      toast.error('Failed to fetch KOTs.');
+    }
   };
 
   if (isLoading) {
@@ -665,7 +854,7 @@ export const TableManagement = () => {
               {/* Row 1: Order Type, Table No (readonly), Waiter, Customer, Mobile, + New Order */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
                 <div className="space-y-2">
-                  <Label className="font-medium">Order Type *</Label>
+                  <Label className="font-medium">Order Type <span className="text-red-500">*</span></Label>
                   <SearchableSelect
                     value={orderType}
                     onValueChange={setOrderType}
@@ -708,15 +897,12 @@ export const TableManagement = () => {
                 </div>
 
                 <Button
-                  className="h-9"
+                  className="h-9 self-end"
                   onClick={handleSubmitOrder}
                   disabled={createOrderMutation.isPending || updateOrderMutation.isPending}
                 >
                   <Plus className="mr-1 h-4 w-4" />
-                  {isEditingOrder
-                    ? (updateOrderMutation.isPending ? 'Updating...' : 'Update Order')
-                    : (createOrderMutation.isPending ? 'Creating...' : 'New Order')
-                  }
+                  {(createOrderMutation.isPending || updateOrderMutation.isPending) ? 'Saving...' : 'Create Order'}
                 </Button>
               </div>
 
@@ -724,8 +910,11 @@ export const TableManagement = () => {
               <div className="flex items-end gap-3">
                 <div className="w-1/2">
                   <MenuItemSearch
+                    key={searchKey}
                     items={menuItems}
+                    combos={activeCombos}
                     onSelect={stageItem}
+                    onSelectCombo={handleSelectCombo}
                     label="Select Product"
                     required
                   />
@@ -733,9 +922,6 @@ export const TableManagement = () => {
 
                 {stagedItem && (
                   <div className="flex items-end gap-2">
-                    <span className="h-9 flex items-center text-sm font-medium max-w-[160px] truncate" title={stagedItem.name}>
-                      {stagedItem.name}
-                    </span>
                     <div className="space-y-2">
                       <Label className="text-xs">Qty</Label>
                       <div className="flex items-center gap-1">
@@ -772,9 +958,6 @@ export const TableManagement = () => {
                     <Button className="h-9 bg-green-600 hover:bg-green-700 text-white" onClick={confirmStagedItem}>
                       <Plus className="mr-1 h-3.5 w-3.5" /> Add
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-destructive" onClick={() => { setStagedItem(null); setStagedQty(1); setStagedIsHalf(false); }}>
-                      <X className="h-4 w-4" />
-                    </Button>
                   </div>
                 )}
               </div>
@@ -801,7 +984,7 @@ export const TableManagement = () => {
                       </tr>
                     ) : (
                       orderItems.map((item, idx) => (
-                        <tr key={item.menuItemId} className="border-b border-border last:border-0">
+                        <tr key={idx} className="border-b border-border last:border-0">
                           <td className="px-4 py-2">{idx + 1}</td>
                           <td className="px-4 py-2">
                             {item.name}
@@ -811,7 +994,7 @@ export const TableManagement = () => {
                           <td className="px-4 py-2 text-center">{item.quantity}</td>
                           <td className="px-4 py-2 text-right font-medium">Rs. {(item.price * item.quantity).toFixed(2)}</td>
                           <td className="px-4 py-2 text-center">
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => deleteItemFromOrder(item.menuItemId)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => deleteItemFromOrder(idx)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </td>
@@ -853,6 +1036,7 @@ export const TableManagement = () => {
                         max={100}
                         value={discountPercentage}
                         onChange={(e) => setDiscountPercentage(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
+                        onFocus={(e) => e.target.select()}
                         className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </div>
@@ -887,6 +1071,7 @@ export const TableManagement = () => {
                         min={0}
                         value={gstPercentage}
                         onChange={(e) => setGstPercentage(Math.max(0, parseFloat(e.target.value) || 0))}
+                        onFocus={(e) => e.target.select()}
                         disabled={!isGstApplied}
                         className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
@@ -898,6 +1083,7 @@ export const TableManagement = () => {
                         min={0}
                         value={paidAmount}
                         onChange={(e) => setPaidAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                        onFocus={(e) => e.target.select()}
                         className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </div>
@@ -908,6 +1094,7 @@ export const TableManagement = () => {
                         min={0}
                         value={extraCharges}
                         onChange={(e) => setExtraCharges(Math.max(0, parseFloat(e.target.value) || 0))}
+                        onFocus={(e) => e.target.select()}
                         className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </div>
@@ -922,6 +1109,7 @@ export const TableManagement = () => {
                         min={0}
                         value={vatPercentage}
                         onChange={(e) => setVatPercentage(Math.max(0, parseFloat(e.target.value) || 0))}
+                        onFocus={(e) => e.target.select()}
                         className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </div>
@@ -942,11 +1130,11 @@ export const TableManagement = () => {
                 <Button variant="outline" onClick={handlePrintBill} disabled={orderItems.length === 0}>
                   <Printer className="mr-2 h-4 w-4" /> Print Bill
                 </Button>
+                <Button variant="outline" onClick={handlePrintKOT} disabled={orderItems.length === 0}>
+                  <ClipboardList className="mr-2 h-4 w-4" /> Print KOT
+                </Button>
                 <Button onClick={handleSubmitOrder} disabled={createOrderMutation.isPending || updateOrderMutation.isPending || orderItems.length === 0}>
-                  {isEditingOrder
-                    ? (updateOrderMutation.isPending ? 'Updating...' : 'Update Order')
-                    : (createOrderMutation.isPending ? 'Creating...' : 'Save Order')
-                  }
+                  {(createOrderMutation.isPending || updateOrderMutation.isPending) ? 'Saving...' : 'Save Order'}
                 </Button>
                 <Button variant="secondary" onClick={() => {
                   if (isEditingOrder && existingOrder) {
@@ -956,9 +1144,6 @@ export const TableManagement = () => {
                   }
                 }}>
                   <RotateCcw className="mr-2 h-4 w-4" /> Reset Order
-                </Button>
-                <Button variant="ghost" onClick={() => { resetOrderForm(); setSelectedTable(null); }}>
-                  <X className="mr-2 h-4 w-4" /> Close
                 </Button>
               </div>
             </div>
@@ -986,7 +1171,7 @@ export const TableManagement = () => {
           >
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="tableNumber">Table Number *</Label>
+                <Label htmlFor="tableNumber">Table Number <span className="text-red-500">*</span></Label>
                 <Input
                   id="tableNumber"
                   value={tableForm.tableNumber}
@@ -995,7 +1180,7 @@ export const TableManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="capacity">Capacity *</Label>
+                <Label htmlFor="capacity">Capacity <span className="text-red-500">*</span></Label>
                 <Input
                   id="capacity"
                   type="number"
@@ -1061,7 +1246,7 @@ export const TableManagement = () => {
           >
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="editTableNumber">Table Number *</Label>
+                <Label htmlFor="editTableNumber">Table Number <span className="text-red-500">*</span></Label>
                 <Input
                   id="editTableNumber"
                   value={editTableForm.tableNumber}
@@ -1070,7 +1255,7 @@ export const TableManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="editCapacity">Capacity *</Label>
+                <Label htmlFor="editCapacity">Capacity <span className="text-red-500">*</span></Label>
                 <Input
                   id="editCapacity"
                   type="number"
@@ -1114,6 +1299,10 @@ export const TableManagement = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* KOT Tiles Dialog */}
+      <KOTTilesDialog kots={kotTilesData} open={kotTilesOpen} onOpenChange={setKotTilesOpen} />
+      <BillPreviewDialog data={billPreviewData} open={billPreviewOpen} onOpenChange={setBillPreviewOpen} />
     </div>
   );
 };
