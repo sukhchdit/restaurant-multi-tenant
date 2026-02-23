@@ -2,6 +2,7 @@ import { useState, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { orderApi } from '@/services/api/orderApi';
 import { menuApi } from '@/services/api/menuApi';
+import axiosInstance from '@/services/api/axiosInstance';
 import { tableApi } from '@/services/api/tableApi';
 import { staffApi } from '@/services/api/staffApi';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,8 +34,21 @@ import { toast } from 'sonner';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { KeyboardShortcutHint } from '@/components/keyboard/KeyboardShortcutHint';
 import { printBill } from '@/components/order/PrintBill';
+import { printKOT } from '@/components/order/PrintKOT';
 import type { Order, OrderStatus, OrderType, CreateOrderRequest, UpdateOrderRequest } from '@/types/order.types';
 import type { MenuItem } from '@/types/menu.types';
+import type { ApiResponse } from '@/types/api.types';
+
+interface ComboForOrder {
+  id: string;
+  name: string;
+  comboPrice: number;
+  originalTotalPrice: number;
+  isAvailable: boolean;
+  startDate?: string;
+  endDate?: string;
+  items: { menuItemId: string; menuItemName: string; menuItemPrice: number; quantity: number }[];
+}
 
 const PAGE_SIZE = 15;
 
@@ -68,14 +82,30 @@ const validTransitions: Record<OrderStatus, OrderStatus[]> = {
   cancelled: [],
 };
 
+interface DropdownEntry {
+  id: string;
+  name: string;
+  price: number;
+  originalPrice?: number;
+  isVeg?: boolean;
+  isHalf?: boolean;
+  categoryName?: string;
+  isCombo?: boolean;
+  comboItems?: { menuItemId: string; menuItemName: string; menuItemPrice: number; quantity: number }[];
+}
+
 const MenuItemSearch = ({
   items,
+  combos = [],
   onSelect,
+  onSelectCombo,
   label = 'Menu Items',
   required = false,
 }: {
   items: MenuItem[];
+  combos?: ComboForOrder[];
   onSelect: (item: { id: string; name: string; price: number; isHalf?: boolean }) => void;
+  onSelectCombo?: (combo: ComboForOrder) => void;
   label?: string;
   required?: boolean;
 }) => {
@@ -84,14 +114,39 @@ const MenuItemSearch = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const filtered = items.filter((item) =>
-    item.name.toLowerCase().includes(search.toLowerCase())
+  const entries: DropdownEntry[] = useMemo(() => {
+    const menuEntries: DropdownEntry[] = items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      price: item.discountedPrice ?? item.price,
+      originalPrice: item.discountedPrice != null && item.discountedPrice < item.price ? item.price : undefined,
+      isVeg: item.isVeg,
+      isHalf: item.isHalf,
+      categoryName: item.categoryName,
+    }));
+    const comboEntries: DropdownEntry[] = combos.map((c) => ({
+      id: `combo:${c.id}`,
+      name: c.name,
+      price: c.comboPrice,
+      originalPrice: c.originalTotalPrice > c.comboPrice ? c.originalTotalPrice : undefined,
+      isCombo: true,
+      comboItems: c.items,
+    }));
+    return [...comboEntries, ...menuEntries];
+  }, [items, combos]);
+
+  const filtered = entries.filter((entry) =>
+    entry.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleSelect = (item: MenuItem) => {
-    const effectivePrice = item.discountedPrice ?? item.price;
-    onSelect({ id: item.id, name: item.name, price: effectivePrice, isHalf: item.isHalf });
-    setSearch(item.name);
+  const handleSelect = (entry: DropdownEntry) => {
+    if (entry.isCombo && onSelectCombo) {
+      const combo = combos.find((c) => `combo:${c.id}` === entry.id);
+      if (combo) onSelectCombo(combo);
+    } else {
+      onSelect({ id: entry.id, name: entry.name, price: entry.price, isHalf: entry.isHalf });
+    }
+    setSearch(entry.name);
     setOpen(false);
     inputRef.current?.blur();
   };
@@ -112,7 +167,7 @@ const MenuItemSearch = ({
             ref={inputRef}
             type="text"
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            placeholder="Search menu items..."
+            placeholder="Search menu items or combos..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
             onFocus={() => { setOpen(true); inputRef.current?.select(); }}
@@ -120,7 +175,7 @@ const MenuItemSearch = ({
               if (e.key === 'Escape') { setOpen(false); inputRef.current?.blur(); }
             }}
           />
-          <Badge variant="secondary" className="shrink-0 text-xs">{items.length} items</Badge>
+          <Badge variant="secondary" className="shrink-0 text-xs">{entries.length} items</Badge>
         </div>
 
         {open && (
@@ -131,40 +186,42 @@ const MenuItemSearch = ({
                   No items match &ldquo;{search}&rdquo;
                 </p>
               ) : (
-                filtered.map((item) => (
+                filtered.map((entry) => (
                   <button
-                    key={item.id}
+                    key={entry.id}
                     type="button"
                     className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer"
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleSelect(item)}
+                    onClick={() => handleSelect(entry)}
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      {item.isVeg && (
+                      {entry.isCombo ? (
+                        <Badge className="text-[10px] px-1.5 py-0 shrink-0 bg-purple-600">Combo</Badge>
+                      ) : entry.isVeg ? (
                         <Leaf className="h-3.5 w-3.5 shrink-0 text-green-600" />
-                      )}
-                      <span className="truncate">{item.name}</span>
-                      {item.isHalf && (
+                      ) : null}
+                      <span className="truncate">{entry.name}</span>
+                      {entry.isHalf && (
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">Half</Badge>
                       )}
-                      {item.categoryName && (
+                      {entry.categoryName && (
                         <span className="text-xs text-muted-foreground shrink-0">
-                          {item.categoryName}
+                          {entry.categoryName}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1 shrink-0 font-medium">
-                      {item.discountedPrice != null && item.discountedPrice < item.price ? (
+                      {entry.originalPrice != null ? (
                         <>
                           <span className="text-xs text-muted-foreground line-through">
-                            Rs. {item.price.toFixed(2)}
+                            Rs. {entry.originalPrice.toFixed(2)}
                           </span>
                           <span className="text-green-600">
-                            Rs. {item.discountedPrice.toFixed(2)}
+                            Rs. {entry.price.toFixed(2)}
                           </span>
                         </>
                       ) : (
-                        <span>Rs. {item.price.toFixed(2)}</span>
+                        <span>Rs. {entry.price.toFixed(2)}</span>
                       )}
                     </div>
                   </button>
@@ -207,6 +264,7 @@ export const OrderManagement = () => {
   const [newOrderStagedItem, setNewOrderStagedItem] = useState<{ id: string; name: string; price: number; isHalf?: boolean } | null>(null);
   const [newOrderStagedQty, setNewOrderStagedQty] = useState(1);
   const [newOrderIsHalf, setNewOrderIsHalf] = useState(false);
+  const [searchKey, setSearchKey] = useState(0);
 
   // ── Payment fields ──
   const [paymentMethod, setPaymentMethod] = useState('cash');
@@ -238,6 +296,15 @@ export const OrderManagement = () => {
     enabled: mainTab === 'new-order' || editDialogOpen,
   });
 
+  const { data: combosResponse } = useQuery({
+    queryKey: ['combos-for-order'],
+    queryFn: async (): Promise<ApiResponse<ComboForOrder[]>> => {
+      const res = await axiosInstance.get('/combos');
+      return res.data;
+    },
+    enabled: mainTab === 'new-order' || editDialogOpen,
+  });
+
   const { data: allTablesRes } = useQuery({
     queryKey: ['tables-for-order', 'all'],
     queryFn: () => tableApi.getTables(),
@@ -256,6 +323,15 @@ export const OrderManagement = () => {
   });
 
   const menuItems = menuResponse?.data?.items ?? [];
+  const activeCombos = useMemo(() => {
+    const now = new Date();
+    return (combosResponse?.data ?? []).filter((c) => {
+      if (!c.isAvailable) return false;
+      if (c.startDate && new Date(c.startDate) > now) return false;
+      if (c.endDate && new Date(c.endDate) < now) return false;
+      return true;
+    });
+  }, [combosResponse]);
   const newOrderTables = newOrderTablesRes?.data ?? [];
   const allTables = allTablesRes?.data ?? [];
   const availableTablesCount = allTables.filter((t) => t.status === 'available').length;
@@ -373,6 +449,32 @@ export const OrderManagement = () => {
     setNewOrderIsHalf(item.isHalf ?? false);
   };
 
+  const handleSelectCombo = (combo: ComboForOrder) => {
+    // Expand combo into individual order items with proportional pricing
+    const originalTotal = combo.items.reduce((s, i) => s + i.menuItemPrice * i.quantity, 0);
+    const ratio = originalTotal > 0 ? combo.comboPrice / originalTotal : 1;
+
+    setOrderItems((prev) => {
+      const updated = [...prev];
+      for (const ci of combo.items) {
+        const adjustedPrice = Math.round(ci.menuItemPrice * ratio * 100) / 100;
+        const existing = updated.find((i) => i.menuItemId === ci.menuItemId);
+        if (existing) {
+          existing.quantity += ci.quantity;
+        } else {
+          updated.push({
+            menuItemId: ci.menuItemId,
+            name: ci.menuItemName,
+            quantity: ci.quantity,
+            price: adjustedPrice,
+          });
+        }
+      }
+      return updated;
+    });
+    toast.success(`Added combo "${combo.name}" to order`);
+  };
+
   const confirmNewOrderStagedItem = () => {
     if (!newOrderStagedItem) return;
     const qty = newOrderIsHalf ? 1 : newOrderStagedQty;
@@ -396,6 +498,7 @@ export const OrderManagement = () => {
     setNewOrderStagedItem(null);
     setNewOrderStagedQty(1);
     setNewOrderIsHalf(false);
+    setSearchKey((k) => k + 1);
   };
 
   const deleteItemFromOrder = (menuItemId: string) => {
@@ -447,6 +550,10 @@ export const OrderManagement = () => {
       toast.error('Please add at least one item to the order');
       return;
     }
+    if (paidAmount < grandTotal) {
+      toast.error(`Paid amount (Rs. ${paidAmount.toFixed(2)}) is less than Grand Total (Rs. ${grandTotal.toFixed(2)})`);
+      return;
+    }
     const request: CreateOrderRequest = {
       orderType: orderType as CreateOrderRequest['orderType'],
       customerName: customerName || undefined,
@@ -487,6 +594,19 @@ export const OrderManagement = () => {
       extraCharges,
       grandTotal,
       paidAmount,
+    });
+  };
+
+  const handlePrintKOT = () => {
+    const waiter = waiters.find((w) => w.id === waiterId);
+    const table = newOrderTables.find((t) => t.id === selectedTableId);
+    printKOT({
+      orderNumber: 'NEW',
+      date: new Date().toLocaleString(),
+      tableNumber: table?.tableNumber,
+      waiterName: waiter?.fullName,
+      items: orderItems.map((i) => ({ name: i.name, qty: i.quantity })),
+      specialNotes: specialNotes || undefined,
     });
   };
 
@@ -924,22 +1044,17 @@ export const OrderManagement = () => {
                 <Input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="+91-..." />
               </div>
 
-              <Button
-                className="h-9"
-                onClick={handleSubmitNewOrder}
-                disabled={createOrderMutation.isPending}
-              >
-                <Plus className="mr-1 h-4 w-4" />
-                {createOrderMutation.isPending ? 'Creating...' : 'New Order'}
-              </Button>
             </div>
 
             {/* Row 2: Product search, Qty, Half, Add */}
             <div className="flex items-end gap-3">
               <div className="w-1/2">
                 <MenuItemSearch
+                  key={searchKey}
                   items={menuItems}
+                  combos={activeCombos}
                   onSelect={stageNewOrderItem}
+                  onSelectCombo={handleSelectCombo}
                   label="Select Product"
                   required
                 />
@@ -947,9 +1062,6 @@ export const OrderManagement = () => {
 
               {newOrderStagedItem && (
                 <div className="flex items-end gap-2">
-                  <span className="h-9 flex items-center text-sm font-medium max-w-[160px] truncate" title={newOrderStagedItem.name}>
-                    {newOrderStagedItem.name}
-                  </span>
                   <div className="space-y-2">
                     <Label className="text-xs">Qty</Label>
                     <div className="flex items-center gap-1">
@@ -985,9 +1097,6 @@ export const OrderManagement = () => {
 
                   <Button className="h-9 bg-green-600 hover:bg-green-700 text-white" onClick={confirmNewOrderStagedItem}>
                     <Plus className="mr-1 h-3.5 w-3.5" /> Add
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-destructive" onClick={() => { setNewOrderStagedItem(null); setNewOrderStagedQty(1); setNewOrderIsHalf(false); }}>
-                    <X className="h-4 w-4" />
                   </Button>
                 </div>
               )}
@@ -1156,14 +1265,14 @@ export const OrderManagement = () => {
               <Button variant="outline" onClick={handlePrintBill} disabled={orderItems.length === 0}>
                 <Printer className="mr-2 h-4 w-4" /> Print Bill
               </Button>
+              <Button variant="outline" onClick={handlePrintKOT} disabled={orderItems.length === 0}>
+                <ClipboardList className="mr-2 h-4 w-4" /> Print KOT
+              </Button>
               <Button onClick={handleSubmitNewOrder} disabled={createOrderMutation.isPending || orderItems.length === 0}>
                 {createOrderMutation.isPending ? 'Creating...' : 'Save Order'}
               </Button>
               <Button variant="secondary" onClick={resetNewOrderForm}>
                 <RotateCcw className="mr-2 h-4 w-4" /> Reset Order
-              </Button>
-              <Button variant="ghost" onClick={() => { resetNewOrderForm(); setMainTab('orders'); }}>
-                <X className="mr-2 h-4 w-4" /> Close
               </Button>
             </div>
           </div>
@@ -1252,6 +1361,7 @@ export const OrderManagement = () => {
 
               <MenuItemSearch
                 items={menuItems}
+                combos={activeCombos}
                 onSelect={addEditItem}
                 label="Add Menu Items"
               />
@@ -1420,6 +1530,22 @@ export const OrderManagement = () => {
                 }}
               >
                 <Printer className="mr-2 h-4 w-4" /> Print Bill
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  printKOT({
+                    orderNumber: selectedOrder.orderNumber,
+                    date: new Date(selectedOrder.createdAt).toLocaleString(),
+                    tableNumber: selectedOrder.tableNumber,
+                    waiterName: selectedOrder.waiterName,
+                    items: selectedOrder.items.map((i) => ({ name: i.menuItemName, qty: i.quantity })),
+                    specialNotes: selectedOrder.specialNotes || undefined,
+                  });
+                }}
+              >
+                <ClipboardList className="mr-2 h-4 w-4" /> Print KOT
               </Button>
 
               {validTransitions[selectedOrder.status].length > 0 ? (

@@ -383,7 +383,7 @@ export const Combos = () => {
       </div>
 
       {/* Combos Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {combos.map((combo) => {
           const isExpired = combo.endDate ? new Date(combo.endDate) < new Date() : false;
           const savingsPercent =
