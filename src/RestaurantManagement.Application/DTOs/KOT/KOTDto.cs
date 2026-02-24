@@ -18,6 +18,8 @@ public class KOTDto
     public DateTime? AcknowledgedAt { get; set; }
     public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
+    public int PrintCount { get; set; }
+    public DateTime? PrintedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public List<KOTItemDto> Items { get; set; } = new();
 }

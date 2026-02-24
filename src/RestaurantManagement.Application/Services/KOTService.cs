@@ -203,4 +203,27 @@ public class KOTService : IKOTService
         var result = _mapper.Map<KOTDto>(kot);
         return ApiResponse<KOTDto>.Ok(result, "KOT is ready.");
     }
+
+    public async Task<ApiResponse<KOTDto>> MarkPrintedAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var kot = await _kotRepository.Query()
+            .Include(k => k.KOTItems)
+            .Include(k => k.Order)
+            .Include(k => k.AssignedChef)
+            .FirstOrDefaultAsync(k => k.Id == id && !k.IsDeleted, cancellationToken);
+
+        if (kot == null)
+            return ApiResponse<KOTDto>.Fail("KOT not found.", 404);
+
+        kot.PrintCount += 1;
+        kot.PrintedAt = DateTime.UtcNow;
+        kot.UpdatedAt = DateTime.UtcNow;
+        kot.UpdatedBy = _currentUser.UserId;
+
+        _kotRepository.Update(kot);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var result = _mapper.Map<KOTDto>(kot);
+        return ApiResponse<KOTDto>.Ok(result, "KOT marked as printed.");
+    }
 }

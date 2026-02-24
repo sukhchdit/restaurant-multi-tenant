@@ -9,4 +9,5 @@ public interface IKOTService
     Task<ApiResponse<KOTDto>> AcknowledgeAsync(Guid id, CancellationToken cancellationToken = default);
     Task<ApiResponse<KOTDto>> StartPreparingAsync(Guid id, CancellationToken cancellationToken = default);
     Task<ApiResponse<KOTDto>> MarkReadyAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<ApiResponse<KOTDto>> MarkPrintedAsync(Guid id, CancellationToken cancellationToken = default);
 }
