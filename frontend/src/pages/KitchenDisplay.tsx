@@ -98,6 +98,18 @@ export const KitchenDisplay = () => {
     },
   });
 
+  const markPrintedMutation = useMutation({
+    mutationFn: (id: string) => orderApi.markKOTPrinted(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['activeKOTs'] });
+    },
+  });
+
+  const handlePrintKOT = (kot: KitchenOrderTicket) => {
+    printKOTTicket(kot);
+    markPrintedMutation.mutate(kot.id);
+  };
+
   const markReadyMutation = useMutation({
     mutationFn: (id: string) => orderApi.markKOTReady(id),
     onMutate: async (id) => {
@@ -288,7 +300,7 @@ export const KitchenDisplay = () => {
                         size="sm"
                         variant="outline"
                         className="h-7 w-7 p-0"
-                        onClick={() => printKOTTicket(kot)}
+                        onClick={() => handlePrintKOT(kot)}
                         title="Print Ticket"
                       >
                         <Printer className="h-3 w-3" />
@@ -311,7 +323,7 @@ export const KitchenDisplay = () => {
                         size="sm"
                         variant="outline"
                         className="h-7 w-7 p-0"
-                        onClick={() => printKOTTicket(kot)}
+                        onClick={() => handlePrintKOT(kot)}
                         title="Print Ticket"
                       >
                         <Printer className="h-3 w-3" />
@@ -329,7 +341,7 @@ export const KitchenDisplay = () => {
                         size="sm"
                         variant="outline"
                         className="h-7 w-7 p-0"
-                        onClick={() => printKOTTicket(kot)}
+                        onClick={() => handlePrintKOT(kot)}
                         title="Print Ticket"
                       >
                         <Printer className="h-3 w-3" />

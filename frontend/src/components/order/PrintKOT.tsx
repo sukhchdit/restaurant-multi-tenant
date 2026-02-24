@@ -241,10 +241,12 @@ export function KOTTilesDialog({
   kots,
   open,
   onOpenChange,
+  onPrinted,
 }: {
   kots: KitchenOrderTicket[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onPrinted?: (kotId: string) => void;
 }) {
   if (kots.length === 0) return null;
 
@@ -305,7 +307,7 @@ export function KOTTilesDialog({
 
               {/* Print single KOT */}
               <div className="flex justify-end border-t border-border pt-2">
-                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => printKOTTicket(kot)}>
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { printKOTTicket(kot); onPrinted?.(kot.id); }}>
                   <Printer className="mr-1 h-3 w-3" /> Print
                 </Button>
               </div>
@@ -317,7 +319,7 @@ export function KOTTilesDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button onClick={() => { kots.forEach((k) => printKOTTicket(k)); onOpenChange(false); }}>
+          <Button onClick={() => { kots.forEach((k) => { printKOTTicket(k); onPrinted?.(k.id); }); onOpenChange(false); }}>
             <Printer className="mr-2 h-4 w-4" /> Print All
           </Button>
         </DialogFooter>

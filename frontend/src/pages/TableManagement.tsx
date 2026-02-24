@@ -297,6 +297,8 @@ export const TableManagement = () => {
   const [vatPercentage, setVatPercentage] = useState(0);
   const [extraCharges, setExtraCharges] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
+  const [paidAmountError, setPaidAmountError] = useState(false);
+  const paidAmountRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
   const pageShortcuts = useMemo(() => ({
@@ -452,6 +454,17 @@ export const TableManagement = () => {
   });
 
   // ── Order mutation ──
+  const invalidateAllOrderQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ['orders'] });
+    queryClient.invalidateQueries({ queryKey: ['tables'] });
+    queryClient.invalidateQueries({ queryKey: ['tables-for-order'] });
+    queryClient.invalidateQueries({ queryKey: ['table-order'] });
+    queryClient.invalidateQueries({ queryKey: ['activeKOTs'] });
+    queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    queryClient.invalidateQueries({ queryKey: ['payments'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+  };
+
   const createOrderMutation = useMutation({
     mutationFn: (data: CreateOrderRequest) => orderApi.createOrder(data),
     onSuccess: async (res) => {
@@ -462,9 +475,7 @@ export const TableManagement = () => {
           await orderApi.updateOrderStatus(orderId, 'completed');
         } catch { /* status update is best-effort */ }
       }
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
-      queryClient.invalidateQueries({ queryKey: ['tables-for-order'] });
+      invalidateAllOrderQueries();
       toast.success('Order created');
       resetOrderForm();
       setSelectedTable(null);
@@ -485,14 +496,18 @@ export const TableManagement = () => {
           await orderApi.updateOrderStatus(orderId, 'completed');
         } catch { /* status update is best-effort */ }
       }
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
-      queryClient.invalidateQueries({ queryKey: ['tables-for-order'] });
-      queryClient.invalidateQueries({ queryKey: ['table-order'] });
+      invalidateAllOrderQueries();
       toast.success('Order updated');
     },
     onError: () => {
       toast.error('Failed to update order');
+    },
+  });
+
+  const markPrintedMutation = useMutation({
+    mutationFn: (id: string) => orderApi.markKOTPrinted(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['activeKOTs'] });
     },
   });
 
@@ -653,6 +668,9 @@ export const TableManagement = () => {
     }
     if (paidAmount < grandTotal) {
       toast.error(`Paid amount (Rs. ${paidAmount.toFixed(2)}) is less than Grand Total (Rs. ${grandTotal.toFixed(2)}). Payment must be completed before saving the order.`);
+      setPaidAmountError(true);
+      paidAmountRef.current?.focus();
+      paidAmountRef.current?.select();
       return;
     }
     saveOrderToDb(orderItems);
@@ -1079,12 +1097,16 @@ export const TableManagement = () => {
                     <div className="space-y-2">
                       <Label className="text-xs font-medium">Paid Amount</Label>
                       <Input
+                        ref={paidAmountRef}
                         type="number"
                         min={0}
                         value={paidAmount}
-                        onChange={(e) => setPaidAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                        onChange={(e) => { setPaidAmount(Math.max(0, parseFloat(e.target.value) || 0)); setPaidAmountError(false); }}
                         onFocus={(e) => e.target.select()}
-                        className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className={cn(
+                          '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
+                          paidAmountError && 'border-red-500 ring-1 ring-red-500 focus-visible:ring-red-500'
+                        )}
                       />
                     </div>
                     <div className="space-y-2">
@@ -1128,10 +1150,10 @@ export const TableManagement = () => {
               {/* Footer Buttons */}
               <div className="flex items-center gap-3">
                 <Button variant="outline" onClick={handlePrintBill} disabled={orderItems.length === 0}>
-                  <Printer className="mr-2 h-4 w-4" /> Print Bill
+                  <Printer className="mr-2 h-4 w-4" /> Preview Bill
                 </Button>
                 <Button variant="outline" onClick={handlePrintKOT} disabled={orderItems.length === 0}>
-                  <ClipboardList className="mr-2 h-4 w-4" /> Print KOT
+                  <ClipboardList className="mr-2 h-4 w-4" /> Preview KOT
                 </Button>
                 <Button onClick={handleSubmitOrder} disabled={createOrderMutation.isPending || updateOrderMutation.isPending || orderItems.length === 0}>
                   {(createOrderMutation.isPending || updateOrderMutation.isPending) ? 'Saving...' : 'Save Order'}
@@ -1301,7 +1323,7 @@ export const TableManagement = () => {
       </Dialog>
 
       {/* KOT Tiles Dialog */}
-      <KOTTilesDialog kots={kotTilesData} open={kotTilesOpen} onOpenChange={setKotTilesOpen} />
+      <KOTTilesDialog kots={kotTilesData} open={kotTilesOpen} onOpenChange={setKotTilesOpen} onPrinted={(kotId) => markPrintedMutation.mutate(kotId)} />
       <BillPreviewDialog data={billPreviewData} open={billPreviewOpen} onOpenChange={setBillPreviewOpen} />
     </div>
   );

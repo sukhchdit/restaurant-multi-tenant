@@ -569,58 +569,95 @@ public class OrderService : IOrderService
         _orderRepository.Update(order);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // Create new KOT for newly added items (previous KOTs remain unchanged)
+        // KOT logic: append to unprinted KOT or create new one
+        bool createdNewKot = false;
         if (dto.Items != null && newOrderItems.Count > 0)
         {
             var restaurantIdForKot = _currentUser.RestaurantId!.Value;
 
-            // Sequential KOT number
-            // IgnoreQueryFilters: include soft-deleted KOTs to avoid unique constraint violation
-            var lastKot = await _kotRepository.Query()
-                .IgnoreQueryFilters()
-                .Where(k => k.RestaurantId == restaurantIdForKot && EF.Functions.Like(k.KOTNumber, "KOT-%"))
-                .OrderByDescending(k => k.KOTNumber)
-                .Select(k => k.KOTNumber)
+            // Look for an existing unprinted KOT (PrintCount == 0, status Sent or Acknowledged)
+            var unprintedKot = await _kotRepository.Query()
+                .Include(k => k.KOTItems)
+                .Where(k => k.OrderId == order.Id && !k.IsDeleted
+                            && k.PrintCount == 0
+                            && (k.Status == KOTStatus.Sent || k.Status == KOTStatus.Acknowledged))
                 .FirstOrDefaultAsync(cancellationToken);
-            var nextKotSeq = 1;
-            if (lastKot != null && lastKot.StartsWith("KOT-") && int.TryParse(lastKot[4..], out var lastKotSeq))
-                nextKotSeq = lastKotSeq + 1;
 
-            string? tableNumber = null;
-            if (order.TableId.HasValue)
+            if (unprintedKot != null)
             {
-                var table = await _tableRepository.GetByIdAsync(order.TableId.Value, cancellationToken);
-                tableNumber = table?.TableNumber;
+                // Append new items to the existing unprinted KOT
+                var kotItems = newOrderItems.Select(oi => new KOTItem
+                {
+                    KOTId = unprintedKot.Id,
+                    OrderItemId = oi.Id,
+                    MenuItemName = oi.MenuItemName,
+                    Quantity = oi.Quantity,
+                    Notes = oi.Notes,
+                    IsVeg = oi.IsVeg,
+                    Status = unprintedKot.Status
+                }).ToList();
+
+                await _kotItemRepository.AddRangeAsync(kotItems, cancellationToken);
+
+                unprintedKot.UpdatedAt = DateTime.UtcNow;
+                unprintedKot.UpdatedBy = _currentUser.UserId;
+                _kotRepository.Update(unprintedKot);
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
-
-            var newKot = new KitchenOrderTicket
+            else
             {
-                RestaurantId = restaurantIdForKot,
-                TenantId = order.TenantId,
-                OrderId = order.Id,
-                KOTNumber = $"KOT-{nextKotSeq:D4}",
-                TableNumber = tableNumber,
-                Status = KOTStatus.Sent,
-                Priority = 0,
-                SentAt = DateTime.UtcNow,
-                CreatedBy = _currentUser.UserId
-            };
+                // All KOTs are printed or in Preparing/Ready — create a new KOT
+                createdNewKot = true;
 
-            await _kotRepository.AddAsync(newKot, cancellationToken);
+                // Sequential KOT number
+                // IgnoreQueryFilters: include soft-deleted KOTs to avoid unique constraint violation
+                var lastKot = await _kotRepository.Query()
+                    .IgnoreQueryFilters()
+                    .Where(k => k.RestaurantId == restaurantIdForKot && EF.Functions.Like(k.KOTNumber, "KOT-%"))
+                    .OrderByDescending(k => k.KOTNumber)
+                    .Select(k => k.KOTNumber)
+                    .FirstOrDefaultAsync(cancellationToken);
+                var nextKotSeq = 1;
+                if (lastKot != null && lastKot.StartsWith("KOT-") && int.TryParse(lastKot[4..], out var lastKotSeq))
+                    nextKotSeq = lastKotSeq + 1;
 
-            var kotItems = newOrderItems.Select(oi => new KOTItem
-            {
-                KOTId = newKot.Id,
-                OrderItemId = oi.Id,
-                MenuItemName = oi.MenuItemName,
-                Quantity = oi.Quantity,
-                Notes = oi.Notes,
-                IsVeg = oi.IsVeg,
-                Status = KOTStatus.Sent
-            }).ToList();
+                string? tableNumber = null;
+                if (order.TableId.HasValue)
+                {
+                    var table = await _tableRepository.GetByIdAsync(order.TableId.Value, cancellationToken);
+                    tableNumber = table?.TableNumber;
+                }
 
-            await _kotItemRepository.AddRangeAsync(kotItems, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+                var newKot = new KitchenOrderTicket
+                {
+                    RestaurantId = restaurantIdForKot,
+                    TenantId = order.TenantId,
+                    OrderId = order.Id,
+                    KOTNumber = $"KOT-{nextKotSeq:D4}",
+                    TableNumber = tableNumber,
+                    Status = KOTStatus.Sent,
+                    Priority = 0,
+                    SentAt = DateTime.UtcNow,
+                    CreatedBy = _currentUser.UserId
+                };
+
+                await _kotRepository.AddAsync(newKot, cancellationToken);
+
+                var kotItems = newOrderItems.Select(oi => new KOTItem
+                {
+                    KOTId = newKot.Id,
+                    OrderItemId = oi.Id,
+                    MenuItemName = oi.MenuItemName,
+                    Quantity = oi.Quantity,
+                    Notes = oi.Notes,
+                    IsVeg = oi.IsVeg,
+                    Status = KOTStatus.Sent
+                }).ToList();
+
+                await _kotItemRepository.AddRangeAsync(kotItems, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
         }
 
         // Reload for correct mapping
@@ -631,9 +668,11 @@ public class OrderService : IOrderService
             .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
 
         var result = _mapper.Map<OrderDto>(updated);
-        var message = newOrderItems.Count > 0
-            ? "Order updated. New KOT created."
-            : "Order updated successfully.";
+        var message = newOrderItems.Count == 0
+            ? "Order updated successfully."
+            : createdNewKot
+                ? "Order updated. New KOT created."
+                : "Order updated. Items appended to existing KOT.";
         return ApiResponse<OrderDto>.Ok(result, message);
     }
 

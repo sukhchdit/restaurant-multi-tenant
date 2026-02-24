@@ -100,6 +100,8 @@ export interface KitchenOrderTicket {
   status: KOTStatus;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   items: KOTItem[];
+  printCount: number;
+  printedAt?: string;
   sentAt: string;
   acknowledgedAt?: string;
   startedAt?: string;

@@ -95,6 +95,18 @@ public class KOTController : ControllerBase
         return StatusCode(result.StatusCode, result);
     }
 
+    [HttpPatch("{id:guid}/print")]
+    [Authorize(Policy = Permissions.KotUpdate)]
+    [ProducesResponseType(typeof(ApiResponse<KOTDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> MarkPrinted(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _kotService.MarkPrintedAsync(id, cancellationToken);
+        if (result.Success)
+            await BroadcastKOTUpdate(result.Data!);
+        return StatusCode(result.StatusCode, result);
+    }
+
     private async Task BroadcastKOTUpdate(KOTDto kot)
     {
         var tenantId = _currentUser.TenantId;

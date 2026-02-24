@@ -72,4 +72,9 @@ export const orderApi = {
     const response = await axiosInstance.patch(`/kot/${id}/mark-ready`);
     return response.data;
   },
+
+  markKOTPrinted: async (id: string): Promise<ApiResponse<KitchenOrderTicket>> => {
+    const response = await axiosInstance.patch(`/kot/${id}/print`);
+    return response.data;
+  },
 };
